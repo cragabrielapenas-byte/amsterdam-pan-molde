@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Pan de molde · Amsterdam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Lora:ital,wght@1,500;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F5EDDF;--surface:#FFFFFF;--ink:#0E1C3A;--muted:#5B6478;
+  --primary:#0E1C3A;--primary-2:#152A52;--primary-3:#1F3A6B;
+  --accent:#E9743A;--accent-2:#F28F57;
+  --info-c:#9CCBEA;--success-c:#7D8340;--warning-c:#CDA85E;--danger-c:#C8473B;
+  --line:rgba(14,28,58,.12);
+  --font-title:'Poppins',system-ui,sans-serif;--font-accent:'Lora',Georgia,serif;--font-body:'Inter',system-ui,sans-serif;
+  --r-sm:10px;--r-md:16px;--r-lg:24px;--r-pill:999px;--shadow:0 10px 30px rgba(14,28,58,.07);
+  /* alias usados por la app */
+  --card:var(--surface);--mut:var(--muted);--soft:#EFE5D3;--pri:var(--primary);--pri2:var(--accent);--prisoft:rgba(233,116,58,.14);
+  --ok:#5E6330;--okbg:#ECEEDB;--warn:#8A6516;--warnbg:#F7EBCF;--crit:#B23A2F;--critbg:#F8E1DD;--info:#24597E;--infobg:#E3F0F9;
+  --r:var(--r-lg);--sh:var(--shadow);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+b,strong{font-weight:600}
+a{color:var(--primary-3);font-weight:600}
+header{position:sticky;top:0;z-index:20;background:var(--primary);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;overflow:hidden}
+header::before{content:'';position:absolute;right:-80px;top:-120px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(156,203,234,.28),transparent 65%);pointer-events:none}
+.brand{display:flex;align-items:center;gap:12px;font-family:var(--font-title);font-weight:700;font-size:18px;letter-spacing:-.01em;position:relative}
+.brand .logo{width:38px;height:38px;border-radius:12px;background:radial-gradient(circle at 35% 30%,#F6B982,var(--accent) 60%,#C85A26);display:grid;place-items:center;font-size:19px}
+.brand em{font-family:var(--font-accent);font-style:italic;font-weight:500;color:var(--accent-2)}
+.brand small{display:block;font-family:var(--font-title);font-weight:500;opacity:.7;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--info-c)}
+.hsp{flex:1}
+.chip-user{white-space:nowrap;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:var(--r-pill);padding:8px 14px;font-family:var(--font-title);font-weight:600;font-size:13px;cursor:pointer;position:relative}
+.chip-user small{opacity:.65;font-weight:500;margin-left:4px}
+.badge-mode{font-family:var(--font-title);font-size:10.5px;font-weight:700;letter-spacing:.16em;padding:5px 10px;border-radius:var(--r-pill);background:var(--warning-c);color:var(--primary);position:relative}
+.badge-mode.live{background:var(--success-c);color:#fff}
+nav{position:sticky;top:62px;z-index:19;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:8px;overflow-x:auto;padding:12px 16px;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:0 0 auto;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:10px 16px;font-family:var(--font-title);font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;color:var(--ink);min-height:44px}
+nav button.on{background:var(--primary);border-color:var(--primary);color:#fff}
+main{max-width:1180px;margin:0 auto;padding:28px 18px 90px}
+.eyebrow{font-family:var(--font-title);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.28em;color:var(--primary-3);margin-bottom:8px}
+.eyebrow span{color:var(--accent);margin-right:10px;font-weight:700}
+h1{font-family:var(--font-title);font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1.08;margin-bottom:8px}
+h1 em,.empty h3 em{font-family:var(--font-accent);font-style:italic;font-weight:500;color:var(--accent)}
+.sub{color:var(--muted);margin-bottom:24px;font-size:16px;max-width:720px}
+h2{font-family:var(--font-title);font-size:22px;font-weight:700;letter-spacing:-.01em;margin:32px 0 14px}
+h3{font-family:var(--font-title)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{background:var(--surface);border:0;border-radius:var(--r-lg);box-shadow:var(--shadow);padding:24px}
+.card > b:first-child{font-family:var(--font-title);font-weight:700;font-size:17px}
+.kpi{position:relative;overflow:hidden}
+.kpi .lbl{font-family:var(--font-title);font-size:11.5px;font-weight:500;color:var(--primary-3);text-transform:uppercase;letter-spacing:.2em}
+.kpi .val{font-family:var(--font-title);font-size:44px;font-weight:700;margin:6px 0 2px;line-height:1.05;letter-spacing:-.02em}
+.kpi .val small{font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
+.kpi .det{font-size:14px;color:var(--muted)}
+.kpi.warn{box-shadow:inset 0 5px 0 var(--warning-c),var(--shadow)} .kpi.crit{box-shadow:inset 0 5px 0 var(--danger-c),var(--shadow)} .kpi.okk{box-shadow:inset 0 5px 0 var(--success-c),var(--shadow)}
+.kpi.dark{background:var(--primary);color:#fff}.kpi.dark input,.kpi.dark select{color:var(--ink)}.kpi.dark .lbl{color:var(--info-c)}.kpi.dark .det,.kpi.dark .val small{color:rgba(255,255,255,.7)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:0;border-radius:var(--r-pill);padding:14px 26px;font-family:var(--font-title);font-weight:600;cursor:pointer;background:var(--accent);color:#fff;font-size:15px;display:inline-flex;align-items:center;gap:8px;justify-content:center;min-height:48px;transition:background .15s}
+.btn:hover{background:#D9662E}
+.btn:active{transform:scale(.98)}
+.btn.sec{background:transparent;color:var(--primary);border:2px solid var(--primary)}
+.btn.sec:hover{background:rgba(14,28,58,.05)}
+.btn.ghost{background:transparent;color:var(--primary-3);padding:8px 10px;min-height:36px;text-decoration:underline;text-underline-offset:3px}
+.btn.danger{background:var(--danger-c)}
+.btn.dark{background:var(--primary)}
+.btn.sm{padding:9px 16px;font-size:13px;min-height:38px}
+.btn.big{padding:18px 26px;font-size:17px;width:100%;min-height:58px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}
+.quick .btn{padding:18px 10px;flex-direction:column;gap:6px;background:var(--surface);color:var(--ink);border-radius:var(--r-md);box-shadow:var(--shadow);min-height:96px}
+.quick .btn:hover{background:#fff;box-shadow:inset 0 -4px 0 var(--accent),var(--shadow)}
+.quick .btn span{font-size:24px}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--ink);margin:16px 0 6px}
+input[type=text],input[type=date],input[type=number],input[type=password],select,textarea{width:100%;border:1.5px solid var(--line);background:#fff;border-radius:var(--r-md);padding:12px 14px;font-size:16px;min-height:50px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(233,116,58,.3)}
+textarea{min-height:60px;resize:vertical}
+.step{display:flex;align-items:stretch;border:1.5px solid var(--line);border-radius:var(--r-pill);overflow:hidden;background:#fff;max-width:240px}
+.step button{width:58px;border:0;background:transparent;font-size:24px;font-weight:600;cursor:pointer;color:var(--primary)}
+.step button:active{background:var(--prisoft)}
+.step input{border:0 !important;border-radius:0;text-align:center;font-family:var(--font-title);font-size:24px;font-weight:700;padding:8px 4px;min-width:0;min-height:54px;box-shadow:none !important;-moz-appearance:textfield}
+.step:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(233,116,58,.3)}
+.step input::-webkit-outer-spin-button,.step input::-webkit-inner-spin-button{-webkit-appearance:none}
+.vrow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
+.vrow:last-child{border-bottom:0}
+.vname{font-family:var(--font-title);font-weight:600;font-size:16px;display:flex;align-items:center;gap:8px}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.vmeta{font-size:14px;color:var(--muted);margin-top:3px}
+.pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-title);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border-radius:var(--r-pill);background:var(--soft);color:var(--ink);white-space:nowrap}
+.pill.ok{background:var(--okbg);color:var(--ok)} .pill.warn{background:var(--warnbg);color:var(--warn)} .pill.crit{background:var(--critbg);color:var(--crit)} .pill.info{background:var(--infobg);color:var(--info)}
+.pill.dark{background:var(--primary);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;font-family:var(--font-title);font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:var(--primary-3);font-weight:500;padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:14px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td.n{font-family:var(--font-title);font-weight:600}
+tr.anul td{color:#a7a9b3;text-decoration:line-through}
+.tw{overflow-x:auto}
+.alerts{display:flex;flex-direction:column;gap:10px}
+.alert{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border-radius:var(--r-md);font-size:15px;background:var(--surface);box-shadow:var(--shadow);border-left:5px solid}
+.alert.crit{border-color:var(--danger-c)} .alert.warn{border-color:var(--warning-c)} .alert.info{border-color:var(--info-c)} .alert.ok{border-color:var(--success-c)}
+.lotes{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.lote{background:var(--surface);border:2px solid transparent;border-radius:var(--r-md);box-shadow:var(--shadow);padding:16px;cursor:pointer;text-align:left;position:relative;font-family:var(--font-body)}
+.lote.sel{border-color:var(--accent);box-shadow:0 0 0 4px var(--prisoft)}
+.lote.warn{border-color:var(--warning-c)} .lote.crit{border-color:var(--danger-c)}
+.lote .ln{font-family:var(--font-title);font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.lote .lv{font-size:14px;font-weight:600;margin:2px 0 8px;display:flex;gap:6px;align-items:center}
+.lote .lq{font-size:14px}
+.lote .lq b{font-family:var(--font-title);font-size:22px;font-weight:700}
+.lote .tag{position:absolute;top:12px;right:12px}
+.seg{display:flex;gap:10px;flex-wrap:wrap}
+.seg button{flex:1 1 140px;border:2px solid var(--line);background:#fff;border-radius:var(--r-md);padding:14px 10px;font-family:var(--font-title);font-weight:600;cursor:pointer;text-align:center;min-height:64px}
+.seg button small{display:block;font-family:var(--font-body);font-weight:400;color:var(--muted);font-size:13px;margin-top:2px}
+.seg button.on{border-color:var(--accent);background:var(--prisoft)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border:1.5px solid var(--line);background:#fff;border-radius:var(--r-pill);padding:10px 16px;font-weight:600;cursor:pointer;min-height:44px}
+.chips button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.muted{color:var(--muted)} .small{font-size:14px}
+.sep{height:1px;background:var(--line);margin:16px 0}
+.bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+.filters label.f{margin-top:0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(140px);background:var(--primary);color:#fff;padding:14px 22px;border-radius:var(--r-pill);font-family:var(--font-title);font-weight:600;z-index:100;transition:.25s;max-width:92vw;box-shadow:0 12px 34px rgba(14,28,58,.3)}
+@media(max-width:600px){#toast{border-radius:16px;width:max-content;max-width:90vw;text-align:center;font-size:14px}.brand{white-space:nowrap;font-size:16px}.badge-mode{display:none}}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.err{background:var(--danger-c)}
+.modal-bg{position:fixed;inset:0;background:rgba(14,28,58,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:var(--r-lg) var(--r-lg) 0 0;padding:28px}
+@media(min-width:700px){.modal-bg{align-items:center;padding:20px}.modal{border-radius:var(--r-lg)}}
+.modal h3{font-size:22px;font-weight:700;margin-bottom:4px;letter-spacing:-.01em}
+.modal h3 em{font-family:var(--font-accent);font-style:italic;font-weight:500;color:var(--accent)}
+.empty{padding:32px;text-align:center;color:var(--muted);background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.empty h3{color:var(--ink);font-size:20px;margin-bottom:4px}
+.loading{display:grid;place-items:center;min-height:50vh;color:var(--muted);font-family:var(--font-title);font-weight:600}
+canvas{max-height:280px}
+.cfg-row{display:grid;grid-template-columns:1fr 110px 90px auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.cfg-row.m{grid-template-columns:1fr 90px auto}
+.cfg-row.u{grid-template-columns:1fr 170px auto}
+/* login */
+.login{position:fixed;inset:0;z-index:40;background:var(--primary);color:#fff;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px}
+.login::before{content:'';position:fixed;left:-140px;bottom:-160px;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(246,185,130,.55),rgba(233,116,58,.25) 45%,transparent 70%);pointer-events:none}
+.login::after{content:'';position:fixed;right:-120px;top:-140px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(156,203,234,.3),transparent 65%);pointer-events:none}
+.login-in{position:relative;width:100%;max-width:640px}
+.login h1{font-size:44px;color:#fff}
+.login h1 em{color:var(--accent-2)}
+.login .eyebrow{color:var(--info-c)}
+.login .sub{color:rgba(255,255,255,.72)}
+.ucards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.ucard{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.16);color:#fff;border-radius:var(--r-md);padding:18px 14px;text-align:left;cursor:pointer;min-height:92px}
+.ucard:hover{background:rgba(255,255,255,.12)}
+.ucard b{display:block;font-family:var(--font-title);font-size:17px;font-weight:600;margin-top:8px}
+.ucard small{font-family:var(--font-title);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--info-c)}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-family:var(--font-title);font-weight:700;color:#fff}
+.pinbox{background:#fff;color:var(--ink);border-radius:var(--r-lg);padding:28px;box-shadow:0 30px 60px rgba(0,0,0,.25);max-width:380px;margin:0 auto}
+.pindots{display:flex;gap:14px;justify-content:center;margin:18px 0 22px}
+.pindots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--primary-3)}
+.pindots i.on{background:var(--accent);border-color:var(--accent)}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.keypad button{min-height:62px;border-radius:var(--r-md);border:0;background:#F3EEE5;font-family:var(--font-title);font-size:24px;font-weight:600;cursor:pointer;color:var(--primary)}
+.keypad button:active{background:var(--prisoft)}
+.keypad button.k2{font-size:14px;background:transparent}
+.shake{animation:sh .35s}
+@keyframes sh{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.rolechip{font-family:var(--font-title);font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border-radius:var(--r-pill)}
+@media(max-width:600px){h1{font-size:30px}.login h1{font-size:34px}.kpi .val{font-size:36px}.cfg-row{grid-template-columns:1fr 80px 70px}.cfg-row .btn,.cfg-row .row{grid-column:1/-1}.cfg-row.u{grid-template-columns:1fr}.card{padding:20px}main{padding:22px 14px 90px}.brand small{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">🍞</div><div>Pan de <em>molde</em><small>Panificadora Amsterdam</small></div></div>
+  <div class="hsp"></div>
+  <span id="mode" class="badge-mode">DEMO</span>
+  <button class="chip-user" id="userChip" onclick="menuUser()">—</button>
+</header>
+<nav id="nav"></nav>
+<main id="view"><div class="loading">Cargando…</div></main>
+<div id="toast"></div>
+<div id="modal"></div>
+<div id="login"></div>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN DE CONEXIÓN
+   Pegá acá la anon key LEGACY (empieza con eyJ...) de Supabase:
+   Settings → API → Legacy API Keys → anon public
+   Si queda vacía, la app funciona en MODO DEMO (datos en este navegador).
+   ===================================================================== */
+const SUPABASE_URL = 'https://lyzfmbiusuxsuyoowrdy.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5emZtYml1c3V4c3V5b293cmR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNjU0MjAsImV4cCI6MjEwMDg0MTQyMH0.AYz5L8IExegZNhZ423IXmGJucY2bDJkWlpHZFuR8cFg';
+
+/* ===================== utilidades ===================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
+const diffDays = (a, b) => Math.round((Date.parse(a + 'T00:00:00Z') - Date.parse(b + 'T00:00:00Z')) / 864e5);
+const dow = iso => new Date(iso + 'T00:00:00Z').getUTCDay();          // 0 = domingo
+const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const DIAS3 = ['dom','lun','mar','mié','jue','vie','sáb'];
+const fmtD = iso => iso ? iso.slice(8,10) + '/' + iso.slice(5,7) : '—';
+const fmtDL = iso => iso ? DIAS3[dow(iso)] + ' ' + fmtD(iso) : '—';
+const nf = n => (Math.round(n * 10) / 10).toLocaleString('es-UY');
+const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : null;
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id' + Math.random().toString(36).slice(2) + Date.now());
+const loteNum = iso => dow(iso);                                       // lun=1 … sáb=6
+const loteLbl = l => `L${l.lote} · ${fmtD(l.fecha)}`;
+const COLORS = ['#E9743A','#1F3A6B','#7D8340','#CDA85E','#5FA3CF','#C8473B','#8B5E9A','#5B6478'];
+const ETAPAS = { pendiente: 'Antes del corte', corte: 'En sandwichería', terminado: 'Pan envasado' };
+const ETAPA_U = { pendiente: 'moldes', corte: 'moldes', terminado: 'paquetes' };
+const TIPOS = { produccion: 'Producción', pedido: 'Pedido', corte: 'Corte', descarte: 'Descarte', despacho: 'Despacho', ajuste: 'Ajuste de conteo' };
+const MOTIVOS_DESVIO = ['Faltó personal','Falta de insumo','Problema de máquina / horno','Ajuste a la demanda','Error en el pedido'];
+
+let S = { variedades: [], motivos: [], personas: [], config: {}, pedidos: [], lotes: [], movs: [] };
+let VIEW = 'inicio', UI = {}, CHARTS = [], VER = 0, CALC = null, CALCV = -1;
+/* ===================== usuarios, roles y sesión ===================== */
+const ROLES = {
+  admin:        { label: 'Administración', color: '#E9743A', desc: 'Todo, incluidos usuarios y configuración. Puede anular cualquier registro.', views: ['inicio','pedidos','produccion','pendientes','sandwicheria','stock','descartes','informes','historial','usuarios','config'], anularTodo: true },
+  supervisor:   { label: 'Supervisión',    color: '#1F3A6B', desc: 'Todas las etapas, informes e historial. Puede anular cualquier registro. No gestiona usuarios.', views: ['inicio','pedidos','produccion','pendientes','sandwicheria','stock','descartes','informes','historial'], anularTodo: true },
+  produccion:   { label: 'Producción',     color: '#7D8340', desc: 'Pedidos, producción, enfriamiento y descartes.', views: ['inicio','pedidos','produccion','pendientes','descartes','historial'] },
+  sandwicheria: { label: 'Sandwichería',   color: '#CDA85E', desc: 'Enfriamiento, corte/envasado y descartes.', views: ['inicio','pendientes','sandwicheria','descartes'] },
+  despacho:     { label: 'Despacho',       color: '#5FA3CF', desc: 'Stock terminado, despachos y descartes de pan envasado.', views: ['inicio','stock','descartes'] },
+  consulta:     { label: 'Solo consulta',  color: '#5B6478', desc: 'Ve el resumen, pendientes, informes e historial. No registra nada.', views: ['inicio','pendientes','informes','historial'], soloLectura: true }
+};
+const ME = () => { const id = localStorage.getItem('pm_sess'); return S.personas.find(p => p.id === id && p.activo && ROLES[p.rol]) || null; };
+const user = () => ME()?.nombre || '';
+const rol = () => ROLES[ME()?.rol] || null;
+const canView = v => !!rol() && rol().views.includes(v);
+const canWrite = () => !!rol() && !rol().soloLectura;
+const localDay = ts => { const d = new Date(ts); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const hoyMio = r => !!r && r.responsable === user() && !!r.created_at && localDay(r.created_at) === today();
+const canAnular = r => !!rol() && (rol().anularTodo || (canWrite() && hoyMio(r)));
+async function hashPin(id, pin) {
+  const txt = 'pm|' + id + '|' + pin;
+  if (crypto.subtle) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  let h = 5381; for (const c of txt) h = (h * 33 ^ c.charCodeAt(0)) >>> 0; return 'f' + h.toString(16);
+}
+function H(n, eb, t, acc) { return `<div class="eyebrow"><span>${String(n).padStart(2, '0')}</span>${eb}</div><h1>${t} <em>${acc}</em></h1>`; }
+
+function toast(msg, err) { const t = $('#toast'); t.textContent = msg; t.className = 'show' + (err ? ' err' : ''); clearTimeout(t._h); t._h = setTimeout(() => t.className = '', err ? 4200 : 2400); }
+function cfg(k) { const d = { dias_alerta: 2, dias_critico: 3, vida_util: 4, umbral_desvio: 10, rend_min: 90 }; const v = S.config[k]; return v === undefined || v === null || v === '' ? d[k] : Number(v); }
+const vById = id => S.variedades.find(v => v.id === id) || { nombre: '¿?', rendimiento: 1, orden: 0 };
+const vColor = id => { const i = S.variedades.findIndex(v => v.id === id); return COLORS[(i < 0 ? 0 : i) % COLORS.length]; };
+const vDot = id => `<i class="dot" style="background:${vColor(id)}"></i>`;
+const vAct = () => S.variedades.filter(v => v.activo).sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre));
+
+/* ===================== capa de datos ===================== */
+const LIVE = !!SUPABASE_KEY;
+let sb = null;
+const TABLES = { variedades: 'pm_variedades', motivos: 'pm_motivos', personas: 'pm_personas', pedidos: 'pm_pedidos', lotes: 'pm_lotes', movs: 'pm_movimientos' };
+const T2K = Object.fromEntries(Object.entries(TABLES).map(([k, t]) => [t, k]));
+
+const DB = {
+  async load() {
+    if (LIVE) {
+      const desde = addDays(today(), -400);
+      const all = async (t, q) => { let out = [], from = 0; for (;;) { let r = await q(sb.from(t).select('*')).range(from, from + 999); if (r.error) throw r.error; out = out.concat(r.data); if (r.data.length < 1000) break; from += 1000; } return out; };
+      const [v, m, p, c, pe, lo, mo] = await Promise.all([
+        all('pm_variedades', q => q.order('orden')), all('pm_motivos', q => q.order('orden')), all('pm_personas', q => q.order('nombre')),
+        all('pm_config', q => q), all('pm_pedidos', q => q.gte('fecha', desde).order('fecha')),
+        all('pm_lotes', q => q.gte('fecha', desde).order('fecha')), all('pm_movimientos', q => q.gte('fecha', desde).order('created_at'))
+      ]);
+      S = { variedades: v, motivos: m, personas: p, config: Object.fromEntries(c.map(x => [x.clave, x.valor])), pedidos: pe, lotes: lo, movs: mo };
+    } else {
+      const raw = localStorage.getItem('pm_demo');
+      S = raw ? JSON.parse(raw) : demoBase();
+      for (const p of S.personas) if (p.pin_demo && !p.pin_hash) { p.pin_hash = await hashPin(p.id, p.pin_demo); delete p.pin_demo; }
+      demoSave();
+    }
+    VER++;
+  },
+  async ins(k, row) {
+    row = { ...row };
+    if (LIVE) { const r = await sb.from(TABLES[k]).insert(row).select().single(); if (r.error) throw r.error; S[k].push(r.data); VER++; return r.data; }
+    row.id = row.id || uid(); row.created_at = new Date().toISOString();
+    demoCheckUnique(k, row);
+    S[k].push(row); demoSave(); VER++; return row;
+  },
+  async upd(k, id, patch) {
+    if (['pedidos', 'lotes'].includes(k)) patch.updated_at = new Date().toISOString();
+    if (LIVE) { const r = await sb.from(TABLES[k]).update(patch).eq('id', id).select().single(); if (r.error) throw r.error; const i = S[k].findIndex(x => x.id === id); if (i >= 0) S[k][i] = r.data; VER++; return r.data; }
+    const o = S[k].find(x => x.id === id); Object.assign(o, patch); demoSave(); VER++; return o;
+  },
+  async setCfg(clave, valor) {
+    if (LIVE) { const r = await sb.from('pm_config').upsert({ clave, valor }); if (r.error) throw r.error; }
+    S.config[clave] = valor; if (!LIVE) demoSave(); VER++;
+  }
+};
+function demoSave() { if (!LIVE) localStorage.setItem('pm_demo', JSON.stringify(S)); }
+function demoCheckUnique(k, row) {
+  if (k === 'pedidos' && S.pedidos.some(p => !p.anulado && p.fecha === row.fecha && p.variedad_id === row.variedad_id)) throw { code: '23505' };
+  if (k === 'lotes' && S.lotes.some(p => !p.anulado && p.fecha === row.fecha && p.variedad_id === row.variedad_id)) throw { code: '23505' };
+}
+function demoBase() {
+  const v = [{ id: uid(), nombre: 'Pan de sándwich blanco', rendimiento: 1, activo: true, orden: 1 }, { id: uid(), nombre: 'Pan de sándwich integral', rendimiento: 1, activo: true, orden: 2 }];
+  return {
+    variedades: v,
+    motivos: ['Pan viejo', 'Problema de cocción', 'Problema de calidad', 'Rotura durante el corte', 'Devolución / sobrante', 'Otro'].map((n, i) => ({ id: uid(), nombre: n, activo: true, orden: i + 1 })),
+    personas: [['Gabi', 'admin'], ['Encargado producción', 'produccion'], ['Sandwichería', 'sandwicheria'], ['Recepción', 'despacho'], ['Contadora', 'consulta']].map(([n, r]) => ({ id: uid(), nombre: n, rol: r, activo: true, pin_demo: '1234' })),
+    config: { dias_alerta: 2, dias_critico: 3, vida_util: 4, umbral_desvio: 10, rend_min: 90 },
+    pedidos: [], lotes: [], movs: []
+  };
+}
+function errMsg(e) {
+  if (e && e.code === '23505') return 'Ya existe un registro para esa fecha y variedad (puede que otro usuario lo haya cargado recién). Actualicé los datos.';
+  return 'Error al guardar: ' + (e?.message || e);
+}
+async function safe(fn) {
+  try { await fn(); } catch (e) { console.error(e); toast(errMsg(e), true); if (e?.code === '23505') { await DB.load(); render(); } }
+}
+
+/* ===================== cálculo de stock (siempre derivado) ===================== */
+function calc() {
+  if (CALCV === VER && CALC) return CALC;
+  const t = today();
+  const lots = S.lotes.filter(l => !l.anulado).map(l => ({ ...l, cort: 0, paq: 0, descPend: 0, descCorte: 0, descTerm: 0, desp: 0, ajP: 0, ajT: 0, primerCorte: null, ultCorte: null }));
+  const byId = Object.fromEntries(lots.map(l => [l.id, l]));
+  const movs = S.movs.filter(m => !m.anulado);
+  for (const m of movs) {
+    const L = byId[m.lote_id]; if (!L) continue;
+    if (m.tipo === 'corte') { L.cort += m.moldes; L.paq += m.paquetes; if (!L.primerCorte || m.fecha < L.primerCorte) L.primerCorte = m.fecha; if (!L.ultCorte || m.fecha > L.ultCorte) L.ultCorte = m.fecha; }
+    else if (m.tipo === 'descarte') { if (m.etapa === 'pendiente') L.descPend += m.moldes; else if (m.etapa === 'corte') L.descCorte += m.moldes; else L.descTerm += m.paquetes; }
+    else if (m.tipo === 'despacho') L.desp += m.paquetes;
+    else if (m.tipo === 'ajuste') { if (m.etapa === 'terminado') L.ajT += m.paquetes; else L.ajP += m.moldes; }
+  }
+  for (const L of lots) {
+    L.pend = L.moldes - L.cort - L.descPend - L.descCorte + L.ajP;
+    L.disp = L.paq - L.desp - L.descTerm + L.ajT;
+    L.consumido = L.moldes - L.pend;
+    L.edad = diffDays(t, L.fecha);
+    L.edadTerm = L.primerCorte ? diffDays(t, L.primerCorte) : null;
+    L.nivel = L.edad >= cfg('dias_critico') ? 'crit' : L.edad >= cfg('dias_alerta') ? 'warn' : 'ok';
+    L.nivelT = L.edadTerm === null ? 'ok' : L.edadTerm > cfg('vida_util') ? 'crit' : L.edadTerm === cfg('vida_util') ? 'warn' : 'ok';
+  }
+  lots.sort((a, b) => a.fecha.localeCompare(b.fecha) || vById(a.variedad_id).orden - vById(b.variedad_id).orden);
+  CALC = { lots, byId, movs }; CALCV = VER; return CALC;
+}
+const pedidoDe = (fecha, vid) => S.pedidos.find(p => !p.anulado && p.fecha === fecha && p.variedad_id === vid);
+const loteDe = (fecha, vid) => S.lotes.find(l => !l.anulado && l.fecha === fecha && l.variedad_id === vid);
+const moldesEq = m => m.tipo === 'descarte' && m.etapa === 'terminado' ? m.paquetes / (Number(vById(lotVar(m)).rendimiento) || 1) : m.moldes;
+const lotVar = m => (calc().byId[m.lote_id] || S.lotes.find(l => l.id === m.lote_id) || {}).variedad_id;
+function ageLbl(d) { return d <= 0 ? 'Hoy' : d === 1 ? 'Hace 1 día' : `Hace ${d} días`; }
+
+/* ===================== navegación / render ===================== */
+const NAV = [
+  ['inicio', '📊 Resumen'], ['pedidos', '📝 Pedidos'], ['produccion', '🔥 Producción'], ['pendientes', '⏳ Enfriamiento'],
+  ['sandwicheria', '🔪 Sandwichería'], ['stock', '🚚 Stock y despachos'], ['descartes', '🗑️ Descartes'],
+  ['informes', '📈 Informes'], ['historial', '🕘 Historial'], ['usuarios', '👥 Usuarios'], ['config', '⚙️ Configuración']
+];
+function go(v, opts) { if (!canView(v)) { toast('Tu rol no tiene acceso a esa sección', true); v = rol()?.views[0] || 'inicio'; } VIEW = v; UI = opts || {}; render(); window.scrollTo(0, 0); }
+function render() {
+  CHARTS.forEach(c => c.destroy()); CHARTS = [];
+  if (!ME()) { $('#nav').innerHTML = ''; $('#view').innerHTML = ''; $('#userChip').style.display = 'none'; return renderLogin(); }
+  $('#login').innerHTML = ''; $('#userChip').style.display = '';
+  if (!canView(VIEW)) VIEW = rol().views[0];
+  $('#nav').innerHTML = NAV.filter(([k]) => canView(k)).map(([k, l]) => `<button class="${k === VIEW ? 'on' : ''}" onclick="go('${k}')">${l}</button>`).join('');
+  const on = $('#nav .on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+  $('#userChip').innerHTML = esc(user()) + '<small>· ' + rol().label + '</small>';
+  $('#view').innerHTML = (V[VIEW] || V.inicio)();
+  (AFTER[VIEW] || (() => {}))();
+}
+const V = {}, AFTER = {};
+function needUser() { if (!ME()) { render(); return true; } if (!canWrite()) { toast('Tu usuario es de solo consulta', true); return true; } return false; }
+
+/* ---------- stepper ---------- */
+function stepper(id, val, min = 0, oninput = '') {
+  return `<div class="step"><button type="button" onclick="stepBy('${id}',-1)">−</button><input type="number" inputmode="numeric" id="${id}" value="${val ?? ''}" min="${min}" placeholder="0" oninput="${oninput}"><button type="button" onclick="stepBy('${id}',1)">+</button></div>`;
+}
+function stepBy(id, d) { const i = document.getElementById(id); const v = Math.max(Number(i.min || 0), (parseInt(i.value) || 0) + d); i.value = v; i.dispatchEvent(new Event('input')); }
+const num = id => { const el = document.getElementById(id); if (!el || el.value === '') return null; const n = parseInt(el.value); return isNaN(n) ? null : n; };
+
+/* ===================== A. RESUMEN ===================== */
+V.inicio = () => {
+  const C = calc(), t = today(), vs = vAct();
+  const pend = C.lots.filter(l => l.pend > 0), term = C.lots.filter(l => l.disp > 0);
+  const totPend = pend.reduce((s, l) => s + l.pend, 0), totDisp = term.reduce((s, l) => s + l.disp, 0);
+  const viejos = pend.filter(l => l.edad >= cfg('dias_alerta')), viejosM = viejos.reduce((s, l) => s + l.pend, 0);
+  const pedHoy = vs.reduce((s, v) => s + (pedidoDe(t, v.id)?.cantidad || 0), 0);
+  const prodHoy = vs.reduce((s, v) => s + (loteDe(t, v.id)?.moldes || 0), 0);
+  const descHoy = C.movs.filter(m => m.tipo === 'descarte' && m.fecha === t);
+  const descHoyM = descHoy.filter(m => m.etapa !== 'terminado').reduce((s, m) => s + m.moldes, 0);
+  const descHoyP = descHoy.filter(m => m.etapa === 'terminado').reduce((s, m) => s + m.paquetes, 0);
+  const cump = pct(prodHoy, pedHoy);
+  const al = alertas(C);
+  const domingo = dow(t) === 0;
+  return `
+  ${H(1,'Resumen','Resumen','del día')}<div class="sub">${DIAS[dow(t)][0].toUpperCase() + DIAS[dow(t)].slice(1)} ${fmtD(t)} ${domingo ? '· Hoy no se produce' : '· Lote del día: <b>L' + loteNum(t) + '</b>'}</div>
+  <div class="grid g4">
+    <div class="card kpi ${viejosM ? 'warn' : ''}"><div class="lbl">Moldes esperando corte</div><div class="val">${totPend}</div><div class="det">${vs.map(v => vDot(v.id) + ' ' + pend.filter(l => l.variedad_id === v.id).reduce((s, l) => s + l.pend, 0)).join(' &nbsp; ')}</div></div>
+    <div class="card kpi ${viejos.some(l => l.nivel === 'crit') ? 'crit' : viejosM ? 'warn' : 'okk'}"><div class="lbl">Con ${cfg('dias_alerta')}+ días</div><div class="val">${viejosM} <small>moldes</small></div><div class="det">${viejos.length ? viejos.length + ' lote(s): ' + viejos.map(loteLbl).slice(0, 3).join(', ') : 'Nada acumulado'}</div></div>
+    <div class="card kpi"><div class="lbl">Paquetes listos p/ despacho</div><div class="val">${totDisp}</div><div class="det">${vs.map(v => vDot(v.id) + ' ' + term.filter(l => l.variedad_id === v.id).reduce((s, l) => s + l.disp, 0)).join(' &nbsp; ')}</div></div>
+    <div class="card kpi ${cump === null ? '' : Math.abs(cump - 100) > cfg('umbral_desvio') ? 'warn' : 'okk'}"><div class="lbl">Producción hoy vs pedido</div><div class="val">${prodHoy} <small>/ ${pedHoy}</small></div><div class="det">${cump === null ? (pedHoy ? '' : 'Sin pedido cargado') : 'Cumplimiento ' + nf(cump) + '%'}</div></div>
+    <div class="card kpi ${descHoy.length ? 'warn' : ''}"><div class="lbl">Descartes de hoy</div><div class="val">${descHoyM} <small>moldes</small></div><div class="det">${descHoyP} paquetes envasados</div></div>
+  </div>
+  <div class="quick">
+    ${[['pedidos', '📝', 'Cargar pedido'], ['produccion', '🔥', 'Registrar producción'], ['sandwicheria', '🔪', 'Registrar corte'], ['stock', '🚚', 'Despachar'], ['descartes', '🗑️', 'Descartar'], ['informes', '📈', 'Ver informes']].filter(([k]) => canView(k) && (canWrite() || k === 'informes')).map(([k, i, l]) => `<button class="btn" onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('')}
+  </div>
+  <h2>Alertas y desvíos</h2>
+  <div class="alerts">${al.length ? al.map(a => `<div class="alert ${a[0]}"><span>${a[0] === 'crit' ? '🔴' : a[0] === 'warn' ? '🟠' : a[0] === 'ok' ? '🟢' : 'ℹ️'}</span><div>${a[1]}</div></div>`).join('') : '<div class="alert ok"><span>🟢</span><div>Sin alertas. Todo en orden.</div></div>'}</div>
+  <h2>Por variedad</h2>
+  <div class="card tw"><table><thead><tr><th>Variedad</th><th class="n">Pedido hoy</th><th class="n">Producido hoy</th><th class="n">Esperando corte</th><th>Más antiguo</th><th class="n">Paquetes listos</th></tr></thead><tbody>
+  ${vs.map(v => { const pl = pend.filter(l => l.variedad_id === v.id); const old = pl[0]; const pe = pedidoDe(t, v.id), lo = loteDe(t, v.id);
+    return `<tr><td>${vDot(v.id)} <b>${esc(v.nombre)}</b></td><td class="n">${pe ? pe.cantidad : '—'}</td><td class="n">${lo ? lo.moldes : '—'}</td><td class="n"><b>${pl.reduce((s, l) => s + l.pend, 0)}</b></td><td>${old ? `<span class="pill ${old.nivel}">${loteLbl(old)} · ${ageLbl(old.edad)}</span>` : '—'}</td><td class="n"><b>${term.filter(l => l.variedad_id === v.id).reduce((s, l) => s + l.disp, 0)}</b></td></tr>`; }).join('')}
+  </tbody></table></div>`;
+};
+function alertas(C) {
+  const t = today(), out = [], vs = vAct();
+  for (const l of C.lots.filter(l => l.pend > 0 && l.nivel !== 'ok'))
+    out.push([l.nivel, `<b>${l.pend} moldes de ${esc(vById(l.variedad_id).nombre)}</b> del lote ${loteLbl(l)} llevan <b>${l.edad} días</b> esperando corte.`]);
+  for (const l of C.lots.filter(l => l.disp > 0 && l.nivelT !== 'ok'))
+    out.push([l.nivelT, `<b>${l.disp} paquetes de ${esc(vById(l.variedad_id).nombre)}</b> (lote ${loteLbl(l)}) envasados hace ${l.edadTerm} días. Vida útil: ${cfg('vida_util')} días.`]);
+  for (const v of vs) {
+    const pe = pedidoDe(t, v.id), lo = loteDe(t, v.id);
+    if (pe && lo && pe.cantidad) { const d = lo.moldes - pe.cantidad, p = pct(d, pe.cantidad); if (Math.abs(p) > cfg('umbral_desvio')) out.push(['warn', `Producción de ${esc(v.nombre)} hoy: <b>${lo.moldes}</b> vs pedido <b>${pe.cantidad}</b> (${d > 0 ? '+' : ''}${d}, ${p > 0 ? '+' : ''}${nf(p)}%).${lo.motivo_desvio ? ' Motivo: ' + esc(lo.motivo_desvio) : ''}`]); }
+    if (pe && !lo && pe.cantidad > 0 && dow(t) !== 0) out.push(['info', `Hay pedido de <b>${pe.cantidad}</b> moldes de ${esc(v.nombre)} para hoy y todavía no se registró la producción.`]);
+    if (lo && !pe) out.push(['info', `Se registró producción de ${esc(v.nombre)} hoy (${lo.moldes}) sin pedido cargado.`]);
+  }
+  const man = addDays(t, 1); const manD = dow(man) === 0 ? addDays(t, 2) : man;
+  if (!vs.some(v => pedidoDe(manD, v.id))) out.push(['info', `Todavía no hay pedido cargado para el ${DIAS[dow(manD)]} ${fmtD(manD)}.`]);
+  const d7 = addDays(t, -7);
+  const cortes = C.movs.filter(m => m.tipo === 'corte' && m.fecha >= d7 && m.moldes > 0);
+  for (const v of vs) {
+    const cs = cortes.filter(m => lotVar(m) === v.id); const mo = cs.reduce((s, m) => s + m.moldes, 0), pq = cs.reduce((s, m) => s + m.paquetes, 0);
+    if (mo) { const r = pct(pq, mo * Number(v.rendimiento)); if (r < cfg('rend_min')) out.push(['warn', `Rendimiento de corte de ${esc(v.nombre)} en 7 días: <b>${nf(r)}%</b> del estándar (${pq} paquetes de ${mo} moldes).`]); }
+  }
+  const ord = { crit: 0, warn: 1, info: 2, ok: 3 };
+  return out.sort((a, b) => ord[a[0]] - ord[b[0]]);
+}
+
+/* ===================== B. PEDIDOS ===================== */
+V.pedidos = () => {
+  const f = UI.fecha || (new Date().getHours() >= 13 ? (dow(addDays(today(), 1)) === 0 ? addDays(today(), 2) : addDays(today(), 1)) : today());
+  UI.fecha = f;
+  const vs = vAct(), dom = dow(f) === 0;
+  const hist = []; for (let i = -6; i <= 1; i++) { const d = addDays(today(), i); if (dow(d) !== 0) hist.push(d); }
+  return `${H(2,'Pedidos','Pedido a','producción')}<div class="sub">Cuántos moldes de cada variedad hay que elaborar.</div>
+  <div class="card">
+    <label class="f">Fecha de producción</label>
+    <input type="date" value="${f}" onchange="UI.fecha=this.value;render()" style="max-width:240px">
+    <div class="small muted" style="margin-top:6px">${dom ? '<span class="pill crit">Domingo: la panadería está cerrada</span>' : `${DIAS[dow(f)]} · corresponde al <b>lote ${loteNum(f)}</b>`}</div>
+    <div class="sep"></div>
+    ${vs.map(v => { const p = pedidoDe(f, v.id); return `<div class="vrow"><div><div class="vname">${vDot(v.id)} ${esc(v.nombre)}</div><div class="vmeta">${p ? `Cargado por ${esc(p.responsable || '—')} · podés modificarlo` : 'Sin pedido todavía'}</div></div>${stepper('ped_' + v.id, p ? p.cantidad : '')}</div>`; }).join('')}
+    <div style="margin-top:16px"><button class="btn big" ${dom ? 'disabled' : ''} onclick="guardarPedido()">Guardar pedido</button></div>
+  </div>
+  <h2>Últimos pedidos</h2>
+  <div class="card tw"><table><thead><tr><th>Fecha</th>${vs.map(v => `<th class="n">${vDot(v.id)} ${esc(v.nombre.replace('Pan de sándwich ', ''))}</th>`).join('')}<th>Responsable</th></tr></thead><tbody>
+  ${hist.reverse().map(d => `<tr><td><a href="#" onclick="UI.fecha='${d}';render();return false">${fmtDL(d)}</a></td>${vs.map(v => `<td class="n">${pedidoDe(d, v.id)?.cantidad ?? '—'}</td>`).join('')}<td class="small muted">${esc([...new Set(vs.map(v => pedidoDe(d, v.id)?.responsable).filter(Boolean))].join(', '))}</td></tr>`).join('')}
+  </tbody></table></div>`;
+};
+async function guardarPedido() {
+  if (needUser()) return;
+  const f = UI.fecha; if (dow(f) === 0) return toast('Los domingos no se produce', true);
+  if (diffDays(f, today()) < -7) return toast('No se pueden cargar pedidos de hace más de 7 días', true);
+  await safe(async () => {
+    let n = 0;
+    for (const v of vAct()) {
+      const q = num('ped_' + v.id), p = pedidoDe(f, v.id);
+      if (q === null) continue;
+      if (q < 0) throw new Error('Cantidad inválida');
+      if (p) { if (p.cantidad !== q) { await DB.upd('pedidos', p.id, { cantidad: q, responsable: user() }); n++; } }
+      else { await DB.ins('pedidos', { fecha: f, variedad_id: v.id, cantidad: q, responsable: user() }); n++; }
+    }
+    toast(n ? '✅ Pedido guardado' : 'No había cambios'); render();
+  });
+}
+
+/* ===================== C. PRODUCCIÓN ===================== */
+V.produccion = () => {
+  const f = UI.fecha || today(); UI.fecha = f;
+  const vs = vAct(), dom = dow(f) === 0, C = calc();
+  const hist = []; for (let i = -9; i <= 0; i++) { const d = addDays(today(), i); if (dow(d) !== 0) hist.push(d); }
+  return `${H(3,'Producción','Lo que salió','del horno')}<div class="sub">Moldes que salieron del horno. Cada registro crea el lote.</div>
+  <div class="card">
+    <label class="f">Fecha de producción</label>
+    <input type="date" value="${f}" max="${today()}" onchange="UI.fecha=this.value;render()" style="max-width:240px">
+    <div style="margin-top:8px">${dom ? '<span class="pill crit">Domingo: la panadería está cerrada</span>' : `<span class="pill info" style="font-size:14px">Marcar los moldes como LOTE ${loteNum(f)} (${DIAS[dow(f)]})</span>`}</div>
+    <div class="sep"></div>
+    ${vs.map(v => { const p = pedidoDe(f, v.id), l = loteDe(f, v.id), L = l && C.byId[l.id];
+      return `<div class="vrow" style="grid-template-columns:1fr auto"><div><div class="vname">${vDot(v.id)} ${esc(v.nombre)}</div>
+      <div class="vmeta">Pedido: <b>${p ? p.cantidad : 'sin pedido'}</b>${l ? ` · Registrado por ${esc(l.responsable || '—')}${L && L.consumido ? ` · ya se usaron ${L.consumido} moldes` : ''}` : ''}</div>
+      <div id="dif_${v.id}" class="small" style="margin-top:6px"></div>
+      <div id="mot_${v.id}" style="display:none;margin-top:8px"><input type="text" list="motdesv" id="motv_${v.id}" placeholder="Motivo del desvío (opcional)" value="${esc(l?.motivo_desvio || '')}"></div></div>
+      ${stepper('prod_' + v.id, l ? l.moldes : '', 0, `difProd('${v.id}')`)}</div>`; }).join('')}
+    <datalist id="motdesv">${MOTIVOS_DESVIO.map(m => `<option value="${esc(m)}">`).join('')}</datalist>
+    <div style="margin-top:16px"><button class="btn big" ${dom ? 'disabled' : ''} onclick="guardarProd()">Guardar producción</button></div>
+  </div>
+  <h2>Pedido vs. producido (últimos días)</h2>
+  <div class="card tw"><table><thead><tr><th>Fecha</th><th>Lote</th>${vs.map(v => `<th class="n">${vDot(v.id)} ${esc(v.nombre.replace('Pan de sándwich ', ''))}</th>`).join('')}<th class="n">Cumpl. total</th></tr></thead><tbody>
+  ${hist.reverse().map(d => { let pp = 0, pr = 0; const cells = vs.map(v => { const p = pedidoDe(d, v.id), l = loteDe(d, v.id); pp += p?.cantidad || 0; pr += l?.moldes || 0; if (!p && !l) return '<td class="n muted">—</td>'; const df = (l?.moldes || 0) - (p?.cantidad || 0); return `<td class="n">${l?.moldes ?? 0} / ${p?.cantidad ?? '—'} ${df ? `<span class="pill ${Math.abs(pct(df, p?.cantidad || 1)) > cfg('umbral_desvio') ? 'warn' : ''}">${df > 0 ? '+' : ''}${df}</span>` : ''}</td>`; }).join('');
+    const c = pct(pr, pp); return `<tr><td><a href="#" onclick="UI.fecha='${d}';render();return false">${fmtDL(d)}</a></td><td>L${loteNum(d)}</td>${cells}<td class="n"><b>${c === null ? '—' : nf(c) + '%'}</b></td></tr>`; }).join('')}
+  </tbody></table><div class="small muted" style="margin-top:8px">Formato: producido / pedido.</div></div>`;
+};
+AFTER.produccion = () => vAct().forEach(v => difProd(v.id));
+function difProd(vid) {
+  const p = pedidoDe(UI.fecha, vid), q = num('prod_' + vid), el = document.getElementById('dif_' + vid), mo = document.getElementById('mot_' + vid);
+  if (!el) return;
+  if (q === null || !p) { el.innerHTML = q !== null && !p ? '<span class="pill info">Sin pedido para comparar</span>' : ''; mo.style.display = 'none'; return; }
+  const d = q - p.cantidad, pc = p.cantidad ? pct(d, p.cantidad) : null, fuera = pc !== null && Math.abs(pc) > cfg('umbral_desvio');
+  el.innerHTML = d === 0 ? '<span class="pill ok">✓ Igual al pedido · 100%</span>' : `<span class="pill ${fuera ? 'warn' : 'info'}">${d > 0 ? 'Se hicieron ' + d + ' de más' : 'Faltaron ' + (-d)} · cumplimiento ${nf(pct(q, p.cantidad))}%</span>`;
+  mo.style.display = fuera ? 'block' : 'none';
+}
+async function guardarProd() {
+  if (needUser()) return;
+  const f = UI.fecha, C = calc();
+  if (dow(f) === 0) return toast('Los domingos no se produce', true);
+  if (f > today()) return toast('No se puede registrar producción futura', true);
+  await safe(async () => {
+    let n = 0;
+    for (const v of vAct()) {
+      const q = num('prod_' + v.id); if (q === null) continue;
+      const l = loteDe(f, v.id), mot = (document.getElementById('motv_' + v.id)?.value || '').trim() || null;
+      if (l) {
+        const L = C.byId[l.id];
+        if (q < L.consumido) throw new Error(`${v.nombre}: ya se usaron ${L.consumido} moldes de este lote (cortes/descartes). No puede quedar en ${q}.`);
+        if (q !== l.moldes || mot !== (l.motivo_desvio || null)) { await DB.upd('lotes', l.id, { moldes: q, motivo_desvio: mot, responsable: user() }); n++; }
+      } else if (q > 0) { await DB.ins('lotes', { fecha: f, variedad_id: v.id, lote: loteNum(f), moldes: q, motivo_desvio: mot, responsable: user() }); n++; }
+    }
+    toast(n ? `✅ Producción guardada · Lote ${loteNum(f)}` : 'No había cambios'); render();
+  });
+}
+
+/* ===================== D. ENFRIAMIENTO / PENDIENTES ===================== */
+V.pendientes = () => {
+  const C = calc(), vs = vAct(), pend = C.lots.filter(l => l.pend > 0), A = cfg('dias_alerta'), K = cfg('dias_critico');
+  const filtro = UI.v || '';
+  const lista = pend.filter(l => !filtro || l.variedad_id === filtro);
+  return `${H(4,'Enfriamiento','Esperando','el corte')}<div class="sub">Moldes producidos que todavía no se cortaron ni descartaron. Ordenados del más viejo al más nuevo.</div>
+  <div class="grid g4">${vs.map(v => { const pl = pend.filter(l => l.variedad_id === v.id), s = k => pl.filter(k).reduce((a, l) => a + l.pend, 0);
+    return `<div class="card kpi"><div class="lbl">${vDot(v.id)} ${esc(v.nombre)}</div><div class="val">${s(() => true)} <small>moldes</small></div>
+    <div class="row" style="gap:6px;margin-top:6px"><span class="pill ok">0–${A - 1}d: ${s(l => l.edad < A)}</span><span class="pill warn">${A}d: ${s(l => l.edad >= A && l.edad < K)}</span><span class="pill crit">${K}d+: ${s(l => l.edad >= K)}</span></div></div>`; }).join('')}</div>
+  <div class="row" style="margin:16px 0 10px;justify-content:space-between">
+    <div class="chips"><button class="${!filtro ? 'on' : ''}" onclick="UI.v='';render()">Todas</button>${vs.map(v => `<button class="${filtro === v.id ? 'on' : ''}" onclick="UI.v='${v.id}';render()">${esc(v.nombre.replace('Pan de sándwich ', ''))}</button>`).join('')}</div>
+    ${canWrite() ? `<button class="btn sec" onclick="conteo('pendiente')">🧮 Conteo físico</button>` : ''}
+  </div>
+  ${lista.length ? `<div class="lotes">${lista.map(l => `<div class="lote ${l.nivel}" ${canView('sandwicheria') && canWrite() ? `onclick="go('sandwicheria',{lote:'${l.id}'})"` : 'style="cursor:default"'}>
+    <span class="tag pill ${l.nivel}">${ageLbl(l.edad)}</span>
+    <div class="ln">L${l.lote}</div><div class="lv">${vDot(l.variedad_id)} ${esc(vById(l.variedad_id).nombre)}</div>
+    <div class="lq"><b>${l.pend}</b> de ${l.moldes} moldes</div>
+    <div class="small muted">Producido ${fmtDL(l.fecha)}${l.cort ? ` · ${l.cort} ya cortados` : ''}</div>
+    <div class="bar" style="margin-top:8px"><i style="width:${Math.round(l.pend / Math.max(l.moldes, 1) * 100)}%"></i></div></div>`).join('')}</div>` : '<div class="empty">No hay moldes pendientes de corte 🎉</div>'}
+  <div class="small muted" style="margin-top:14px">${canView('sandwicheria') ? 'Tocá un lote para registrar su corte. ' : ''} El conteo físico permite corregir diferencias entre lo que dice el sistema y lo que hay realmente.</div>`;
+};
+
+/* ===================== E. SANDWICHERÍA ===================== */
+V.sandwicheria = () => {
+  const C = calc(), vs = vAct(), pend = C.lots.filter(l => l.pend > 0), sel = UI.lote && C.byId[UI.lote];
+  const t = today(), hoy = C.movs.filter(m => m.fecha === t && (m.tipo === 'corte' || (m.tipo === 'descarte' && m.etapa === 'corte')));
+  const primero = {}; pend.forEach(l => { if (!primero[l.variedad_id]) primero[l.variedad_id] = l.id; });
+  let form = '';
+  if (sel) {
+    const v = vById(sel.variedad_id);
+    form = `<div class="card" id="fcorte" style="border:2px solid var(--pri)">
+      <div class="row" style="justify-content:space-between"><div><h3 style="font-size:18px;font-weight:800">Corte · Lote ${loteLbl(sel)}</h3><div class="muted small">${vDot(sel.variedad_id)} ${esc(v.nombre)} · producido ${fmtDL(sel.fecha)} · <b>${sel.pend}</b> moldes pendientes</div></div><button class="btn ghost" onclick="UI.lote=null;render()">✕ Cambiar lote</button></div>
+      ${sel.edad < 1 ? '<div class="alert warn" style="margin-top:12px"><span>🟠</span><div>Este lote se produjo <b>hoy</b>. Verificá que esté bien frío antes de cortar.</div></div>' : ''}
+      ${primero[sel.variedad_id] !== sel.id ? `<div class="alert warn" style="margin-top:12px"><span>🟠</span><div>Hay un lote más viejo de esta variedad (${loteLbl(C.byId[primero[sel.variedad_id]])}). Lo ideal es cortar primero el más antiguo.</div></div>` : ''}
+      <div class="grid g2" style="margin-top:6px">
+        <div><label class="f">Moldes cortados y envasados</label>${stepper('c_mol', '', 0, 'autoPaq()')}</div>
+        <div><label class="f">Paquetes obtenidos <span class="muted">(estándar ${nf(v.rendimiento)} por molde)</span></label>${stepper('c_paq', '', 0, "this.dataset.manual='1';rendCorte()")}<div id="c_rend" class="small" style="margin-top:6px"></div></div>
+        <div><label class="f">Moldes descartados en el corte</label>${stepper('c_desc', 0, 0, 'restoCorte()')}</div>
+        <div id="c_motbox" style="display:none"><label class="f">Motivo del descarte</label><select id="c_mot">${S.motivos.filter(m => m.activo).map(m => `<option ${m.nombre.startsWith('Rotura') ? 'selected' : ''}>${esc(m.nombre)}</option>`).join('')}</select></div>
+      </div>
+      <label class="f">Observaciones (opcional)</label><input type="text" id="c_obs" placeholder="">
+      <div id="c_resto" class="small" style="margin:12px 0"></div>
+      <button class="btn big" onclick="guardarCorte()">Registrar corte</button></div>`;
+  }
+  return `${H(5,'Sandwichería','Corte y','envasado')}<div class="sub">Elegí el lote que estás procesando. Siempre conviene empezar por el más viejo.</div>
+  ${form}
+  <h2>${sel ? 'Otros lotes pendientes' : 'Lotes pendientes de corte'}</h2>
+  ${pend.length ? vs.map(v => { const pl = pend.filter(l => l.variedad_id === v.id); if (!pl.length) return ''; return `<div class="vname" style="margin:12px 0 8px">${vDot(v.id)} ${esc(v.nombre)} <span class="muted small">· ${pl.reduce((s, l) => s + l.pend, 0)} moldes</span></div>
+    <div class="lotes">${pl.map(l => `<button class="lote ${l.nivel} ${sel && sel.id === l.id ? 'sel' : ''}" onclick="UI.lote='${l.id}';render();setTimeout(()=>document.getElementById('fcorte')?.scrollIntoView({behavior:'smooth'}),50)">
+      ${primero[v.id] === l.id ? '<span class="tag pill dark">Cortar primero</span>' : `<span class="tag pill ${l.nivel}">${ageLbl(l.edad)}</span>`}
+      <div class="ln">L${l.lote}</div><div class="small muted" style="margin-bottom:6px">${fmtDL(l.fecha)} · ${ageLbl(l.edad).toLowerCase()}</div><div class="lq"><b>${l.pend}</b> moldes</div></button>`).join('')}</div>`; }).join('') : '<div class="empty">No hay moldes esperando corte.</div>'}
+  <h2>Registrado hoy en sandwichería</h2>
+  ${movTable(hoy, true)}`;
+};
+AFTER.sandwicheria = () => { if (UI.lote && calc().byId[UI.lote]) restoCorte(); };
+function autoPaq() { const p = document.getElementById('c_paq'), L = calc().byId[UI.lote]; if (p.dataset.manual !== '1') p.value = num('c_mol') === null ? '' : Math.round(num('c_mol') * Number(vById(L.variedad_id).rendimiento)); rendCorte(); restoCorte(); }
+function rendCorte() { const L = calc().byId[UI.lote], m = num('c_mol'), p = num('c_paq'), el = document.getElementById('c_rend'); if (!m || p === null) { el.innerHTML = ''; return; } const r = pct(p, m * Number(vById(L.variedad_id).rendimiento)); el.innerHTML = `<span class="pill ${r < cfg('rend_min') ? 'warn' : 'ok'}">Rendimiento ${nf(r)}% del estándar</span>`; }
+function restoCorte() {
+  const L = calc().byId[UI.lote]; if (!L) return; const m = num('c_mol') || 0, d = num('c_desc') || 0, r = L.pend - m - d;
+  document.getElementById('c_motbox').style.display = d > 0 ? 'block' : 'none';
+  document.getElementById('c_resto').innerHTML = r < 0 ? `<span class="pill crit">Te pasaste por ${-r}: este lote tiene ${L.pend} moldes pendientes</span>` : `Después de este registro quedan <b>${r}</b> moldes pendientes del lote ${loteLbl(L)}.`;
+}
+async function guardarCorte() {
+  if (needUser()) return;
+  const L = calc().byId[UI.lote], m = num('c_mol') || 0, p = num('c_paq') || 0, d = num('c_desc') || 0;
+  if (!m && !d) return toast('Indicá moldes cortados o descartados', true);
+  if (m + d > L.pend) return toast(`Solo hay ${L.pend} moldes pendientes en ${loteLbl(L)}`, true);
+  if (m > 0 && p === 0) return toast('Indicá cuántos paquetes se obtuvieron', true);
+  if (m === 0 && p > 0) return toast('Hay paquetes pero ningún molde cortado', true);
+  if (L.edad < 1 && !confirm('Este lote se produjo hoy. ¿Confirmás que ya se cortó?')) return;
+  await safe(async () => {
+    const base = { lote_id: L.id, fecha: today(), responsable: user(), obs: document.getElementById('c_obs').value.trim() || null };
+    if (m) await DB.ins('movs', { ...base, tipo: 'corte', etapa: 'corte', moldes: m, paquetes: p });
+    if (d) await DB.ins('movs', { ...base, tipo: 'descarte', etapa: 'corte', moldes: d, paquetes: 0, motivo: document.getElementById('c_mot').value });
+    const rest = calc().byId[L.id].pend;
+    toast(`✅ Corte registrado · quedan ${rest} moldes del ${loteLbl(L)}`);
+    UI.lote = rest > 0 ? L.id : null; render();
+  });
+}
+
+/* ===================== F. STOCK Y DESPACHOS ===================== */
+V.stock = () => {
+  const C = calc(), vs = vAct(), term = C.lots.filter(l => l.disp > 0), t = today();
+  const dv = UI.dv || vs[0]?.id; UI.dv = dv;
+  const desp = C.movs.filter(m => m.tipo === 'despacho' && m.fecha >= addDays(t, -6));
+  const destinos = [...new Set(S.movs.filter(m => m.destino).map(m => m.destino))].slice(-30);
+  return `${H(6,'Stock y despachos','Listo para','cargar')}<div class="sub">Pan cortado y envasado, listo para cargar en los camiones.</div>
+  <div class="grid g4">${vs.map(v => { const tl = term.filter(l => l.variedad_id === v.id); const tot = tl.reduce((s, l) => s + l.disp, 0); const venc = tl.filter(l => l.nivelT === 'crit').reduce((s, l) => s + l.disp, 0);
+    return `<div class="card kpi ${venc ? 'crit' : ''}"><div class="lbl">${vDot(v.id)} ${esc(v.nombre)}</div><div class="val">${tot} <small>paquetes</small></div><div class="det">${tl.map(l => `<span class="pill ${l.nivelT}" style="margin:2px 2px 0 0">${loteLbl(l)}: ${l.disp}</span>`).join('') || 'Sin stock'}</div></div>`; }).join('')}</div>
+  <div class="card" style="margin-top:16px">
+    <h3 style="font-size:18px;font-weight:800">Registrar despacho</h3><div class="muted small">Se descuenta automáticamente del lote más viejo primero (FIFO).</div>
+    <label class="f">Variedad</label>
+    <div class="seg">${vs.map(v => `<button class="${dv === v.id ? 'on' : ''}" onclick="UI.dv='${v.id}';render()">${vDot(v.id)} ${esc(v.nombre.replace('Pan de sándwich ', ''))}<small>${term.filter(l => l.variedad_id === v.id).reduce((s, l) => s + l.disp, 0)} disponibles</small></button>`).join('')}</div>
+    <div class="grid g2"><div><label class="f">Paquetes que salen</label>${stepper('d_q', '', 0, 'prevFifo()')}</div>
+    <div><label class="f">Camión / destino (opcional)</label><input type="text" id="d_dest" list="dests" placeholder="Ej. Camión 1 – Ruta Este"><datalist id="dests">${destinos.map(d => `<option value="${esc(d)}">`).join('')}</datalist></div></div>
+    <div id="d_prev" class="small" style="margin:12px 0"></div>
+    <button class="btn big" onclick="guardarDesp()">Registrar despacho</button>
+  </div>
+  <div class="row" style="justify-content:space-between;margin-top:6px"><h2>Despachos últimos 7 días</h2>${canWrite() ? `<button class="btn sec sm" onclick="conteo('terminado')">🧮 Conteo físico de paquetes</button>` : ''}</div>
+  ${movTable(desp, true)}`;
+};
+function fifo(vid, q) { const out = []; let r = q; for (const l of calc().lots.filter(l => l.variedad_id === vid && l.disp > 0)) { if (r <= 0) break; const t = Math.min(r, l.disp); out.push([l, t]); r -= t; } return { out, falta: r }; }
+function prevFifo() { const q = num('d_q') || 0, el = document.getElementById('d_prev'); if (!q) { el.innerHTML = ''; return; } const f = fifo(UI.dv, q); el.innerHTML = f.falta > 0 ? `<span class="pill crit">Faltan ${f.falta} paquetes: no hay stock suficiente</span>` : 'Sale de: ' + f.out.map(([l, t]) => `<span class="pill">${loteLbl(l)}: ${t}</span>`).join(' '); }
+async function guardarDesp() {
+  if (needUser()) return;
+  const q = num('d_q') || 0; if (!q) return toast('Indicá la cantidad de paquetes', true);
+  const f = fifo(UI.dv, q); if (f.falta > 0) return toast(`No hay stock suficiente (faltan ${f.falta})`, true);
+  await safe(async () => {
+    const g = uid(), dest = document.getElementById('d_dest').value.trim() || null;
+    for (const [l, t] of f.out) await DB.ins('movs', { tipo: 'despacho', etapa: 'terminado', lote_id: l.id, fecha: today(), moldes: 0, paquetes: t, destino: dest, grupo: g, responsable: user() });
+    toast(`✅ Despacho de ${q} paquetes registrado`); render();
+  });
+}
+
+/* ===================== G. DESCARTES ===================== */
+V.descartes = () => {
+  const C = calc(), vs = vAct(), et = UI.et || 'pendiente', vid = UI.v2 || vs[0]?.id; UI.et = et; UI.v2 = vid;
+  const campo = et === 'terminado' ? 'disp' : 'pend';
+  const lotes = C.lots.filter(l => l.variedad_id === vid && l[campo] > 0);
+  if (!UI.dl || !lotes.find(l => l.id === UI.dl)) UI.dl = lotes[0]?.id;
+  const mot = UI.mot || S.motivos.find(m => m.activo)?.nombre;
+  const d7 = addDays(today(), -6), rec = C.movs.filter(m => m.tipo === 'descarte' && m.fecha >= d7);
+  const prod7 = C.lots.filter(l => l.fecha >= d7).reduce((s, l) => s + l.moldes, 0), eq7 = rec.reduce((s, m) => s + moldesEq(m), 0);
+  const porMot = {}, porEt = {}; rec.forEach(m => { porMot[m.motivo || 'Sin motivo'] = (porMot[m.motivo || 'Sin motivo'] || 0) + moldesEq(m); porEt[m.etapa] = (porEt[m.etapa] || 0) + moldesEq(m); });
+  const maxM = Math.max(1, ...Object.values(porMot));
+  return `${H(7,'Descartes','Lo que','se tira')}<div class="sub">Todo el pan que se tira, en cualquier etapa.</div>
+  <div class="card">
+    <label class="f">¿En qué etapa?</label>
+    <div class="seg">${Object.entries(ETAPAS).map(([k, l]) => `<button class="${et === k ? 'on' : ''}" onclick="UI.et='${k}';UI.dl=null;render()">${l}<small>en ${ETAPA_U[k]}</small></button>`).join('')}</div>
+    <label class="f">Variedad</label>
+    <div class="chips">${vs.map(v => `<button class="${vid === v.id ? 'on' : ''}" onclick="UI.v2='${v.id}';UI.dl=null;render()">${esc(v.nombre.replace('Pan de sándwich ', ''))}</button>`).join('')}</div>
+    <label class="f">Lote</label>
+    ${lotes.length ? `<div class="chips">${lotes.map(l => `<button class="${UI.dl === l.id ? 'on' : ''}" onclick="UI.dl='${l.id}';render()">${loteLbl(l)} · ${l[campo]} ${ETAPA_U[et]}</button>`).join('')}</div>` : `<div class="empty">No hay ${ETAPA_U[et]} de esta variedad en esta etapa.</div>`}
+    <div class="grid g2"><div><label class="f">Cantidad (${ETAPA_U[et]})</label>${stepper('x_q', '', 0)}</div>
+    <div><label class="f">Motivo</label><div class="chips">${S.motivos.filter(m => m.activo).map(m => `<button class="${mot === m.nombre ? 'on' : ''}" onclick="UI.mot=this.dataset.m;render()" data-m="${esc(m.nombre)}">${esc(m.nombre)}</button>`).join('')}</div></div></div>
+    <label class="f">Observaciones (opcional)</label><input type="text" id="x_obs">
+    <div style="margin-top:16px"><button class="btn big" ${lotes.length ? '' : 'disabled'} onclick="guardarDesc()">Registrar descarte</button></div>
+  </div>
+  <h2>Últimos 7 días</h2>
+  <div class="grid g2">
+    <div class="card kpi ${pct(eq7, prod7) > 5 ? 'warn' : ''}"><div class="lbl">Descarte total (equivalente en moldes)</div><div class="val">${nf(eq7)} <small>moldes</small></div><div class="det">${prod7 ? nf(pct(eq7, prod7)) + '% de lo producido (' + prod7 + ' moldes)' : 'Sin producción en el período'}</div>
+      <div class="sep"></div>${Object.entries(ETAPAS).map(([k, l]) => `<div class="row" style="justify-content:space-between"><span>${l}</span><b>${nf(porEt[k] || 0)}</b></div>`).join('')}</div>
+    <div class="card"><div class="kpi"><div class="lbl">Por motivo</div></div>${Object.keys(porMot).length ? Object.entries(porMot).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div style="margin-top:10px"><div class="row" style="justify-content:space-between"><span>${esc(k)}</span><b>${nf(n)}</b></div><div class="bar"><i style="width:${n / maxM * 100}%;background:var(--crit)"></i></div></div>`).join('') : '<div class="muted" style="margin-top:10px">Sin descartes 🎉</div>'}</div>
+  </div>
+  <h2>Registros recientes</h2>${movTable(rec, true)}`;
+};
+async function guardarDesc() {
+  if (needUser()) return;
+  const C = calc(), L = C.byId[UI.dl], q = num('x_q') || 0, et = UI.et, campo = et === 'terminado' ? 'disp' : 'pend';
+  const mot = UI.mot || S.motivos.find(m => m.activo)?.nombre;
+  if (!L) return toast('Elegí un lote', true); if (!q) return toast('Indicá la cantidad', true);
+  if (q > L[campo]) return toast(`El lote ${loteLbl(L)} tiene ${L[campo]} ${ETAPA_U[et]} en esta etapa`, true);
+  await safe(async () => {
+    await DB.ins('movs', { tipo: 'descarte', etapa: et, lote_id: L.id, fecha: today(), moldes: et === 'terminado' ? 0 : q, paquetes: et === 'terminado' ? q : 0, motivo: mot, obs: document.getElementById('x_obs').value.trim() || null, responsable: user() });
+    toast(`Descarte registrado: ${q} ${ETAPA_U[et]}`); render();
+  });
+}
+
+/* ===================== conteo físico (ajustes) ===================== */
+function conteo(etapa) {
+  const C = calc(), campo = etapa === 'terminado' ? 'disp' : 'pend', u = ETAPA_U[etapa];
+  const lots = C.lots.filter(l => l[campo] > 0 || (etapa === 'pendiente' ? l.edad <= 6 && l.cort === 0 : false));
+  modal(`<h3>Conteo físico · ${etapa === 'terminado' ? 'paquetes envasados' : 'moldes sin cortar'}</h3>
+  <div class="muted small">Contá lo que hay realmente por lote. Solo completá los que contaste. Las diferencias quedan registradas como ajuste.</div>
+  <div style="margin-top:10px">${lots.length ? lots.map(l => `<div class="vrow"><div><div class="vname">${vDot(l.variedad_id)} ${loteLbl(l)}</div><div class="vmeta">${esc(vById(l.variedad_id).nombre)} · sistema: <b>${l[campo]}</b> ${u}</div></div>${stepper('k_' + l.id, '', 0)}</div>`).join('') : '<div class="empty">No hay lotes con stock en esta etapa.</div>'}</div>
+  <div class="row" style="margin-top:16px"><button class="btn" style="flex:1" onclick="guardarConteo('${etapa}')">Guardar conteo</button><button class="btn sec" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function guardarConteo(etapa) {
+  if (needUser()) return;
+  const C = calc(), campo = etapa === 'terminado' ? 'disp' : 'pend', ajs = [];
+  for (const l of C.lots) { const q = num('k_' + l.id); if (q === null) continue; const d = q - l[campo]; if (d) ajs.push([l, d]); }
+  if (!ajs.length) { closeModal(); return toast('El conteo coincide con el sistema ✓'); }
+  if (!confirm('Se registrarán ' + ajs.length + ' ajuste(s):\n' + ajs.map(([l, d]) => `${loteLbl(l)} (${vById(l.variedad_id).nombre}): ${d > 0 ? '+' : ''}${d}`).join('\n'))) return;
+  await safe(async () => {
+    for (const [l, d] of ajs) await DB.ins('movs', { tipo: 'ajuste', etapa, lote_id: l.id, fecha: today(), moldes: etapa === 'terminado' ? 0 : d, paquetes: etapa === 'terminado' ? d : 0, motivo: 'Diferencia de conteo', responsable: user() });
+    closeModal(); toast('✅ Conteo guardado'); render();
+  });
+}
+
+/* ===================== tabla de movimientos (compartida) ===================== */
+function movTable(list, anular) {
+  if (!list.length) return '<div class="empty">Sin registros.</div>';
+  const C = calc();
+  return `<div class="card tw"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Lote</th><th>Variedad</th><th class="n">Moldes</th><th class="n">Paquetes</th><th>Detalle</th><th>Usuario</th>${anular ? '<th></th>' : ''}</tr></thead><tbody>
+  ${[...list].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).map(m => { const l = C.byId[m.lote_id] || S.lotes.find(x => x.id === m.lote_id) || {};
+    return `<tr class="${m.anulado ? 'anul' : ''}"><td>${fmtDL(m.fecha)}<div class="small muted">${m.created_at ? new Date(m.created_at).toLocaleTimeString('es-UY', { hour: '2-digit', minute: '2-digit' }) : ''}</div></td>
+    <td><span class="pill ${m.tipo === 'descarte' ? 'crit' : m.tipo === 'ajuste' ? 'warn' : m.tipo === 'despacho' ? 'info' : 'ok'}">${TIPOS[m.tipo]}</span></td>
+    <td>${l.fecha ? loteLbl(l) : '—'}</td><td>${l.variedad_id ? vDot(l.variedad_id) + ' ' + esc(vById(l.variedad_id).nombre.replace('Pan de sándwich ', '')) : ''}</td>
+    <td class="n">${m.moldes || ''}</td><td class="n">${m.paquetes || ''}</td>
+    <td class="small">${esc([m.etapa && m.tipo === 'descarte' ? ETAPAS[m.etapa] : '', m.motivo, m.destino, m.obs].filter(Boolean).join(' · '))}${m.anulado ? ` <i>(anulado por ${esc(m.anulado_por || '')})</i>` : ''}</td>
+    <td class="small muted">${esc(m.responsable || '')}</td>
+    ${anular ? `<td>${m.anulado || !canAnular(m) ? '' : `<button class="btn ghost sm" onclick="anularMov('${m.id}')">Anular</button>`}</td>` : ''}</tr>`; }).join('')}
+  </tbody></table></div>`;
+}
+async function anularMov(id) {
+  if (needUser()) return;
+  const m = S.movs.find(x => x.id === id);
+  if (!canAnular(m)) return toast('Solo podés anular tus propios registros del día. Pedíselo a un supervisor.', true);
+  const grupo = m.grupo ? S.movs.filter(x => x.grupo === m.grupo && !x.anulado) : [m];
+  // Validar que anular no deje stock negativo (ej: anular un corte cuyos paquetes ya se despacharon)
+  if (m.tipo === 'corte') { const L = calc().byId[m.lote_id]; if (L && L.disp - m.paquetes < 0) return toast(`No se puede anular: ${m.paquetes - L.disp} paquetes de ese corte ya se despacharon o descartaron. Anulá eso primero.`, true); }
+  if (m.tipo === 'ajuste') { const L = calc().byId[m.lote_id]; const campo = m.etapa === 'terminado' ? 'disp' : 'pend', d = m.etapa === 'terminado' ? m.paquetes : m.moldes; if (L && L[campo] - d < 0) return toast('No se puede anular: el stock quedaría negativo.', true); }
+  if (!confirm(`¿Anular este registro${grupo.length > 1 ? ` (y los ${grupo.length - 1} del mismo despacho)` : ''}? Queda en el historial como anulado.`)) return;
+  await safe(async () => { for (const x of grupo) await DB.upd('movs', x.id, { anulado: true, anulado_por: user(), anulado_at: new Date().toISOString() }); toast('Registro anulado'); render(); });
+}
+
+/* ===================== H. INFORMES ===================== */
+V.informes = () => {
+  const vs = S.variedades; const F = UI.F || (UI.F = { desde: addDays(today(), -13), hasta: today(), v: '', etapa: '' });
+  const R = informe(F);
+  return `${H(8,'Informes','Los números','del proceso')}<div class="sub">Análisis del período. Todo se puede exportar a Excel.</div>
+  <div class="card filters">
+    <div><label class="f">Desde</label><input type="date" value="${F.desde}" onchange="UI.F.desde=this.value;render()"></div>
+    <div><label class="f">Hasta</label><input type="date" value="${F.hasta}" onchange="UI.F.hasta=this.value;render()"></div>
+    <div><label class="f">Variedad</label><select onchange="UI.F.v=this.value;render()"><option value="">Todas</option>${vs.map(v => `<option value="${v.id}" ${F.v === v.id ? 'selected' : ''}>${esc(v.nombre)}</option>`).join('')}</select></div>
+    <div><label class="f">Etapa (descartes)</label><select onchange="UI.F.etapa=this.value;render()"><option value="">Todas</option>${Object.entries(ETAPAS).map(([k, l]) => `<option value="${k}" ${F.etapa === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="row"><button class="btn sec sm" onclick="setRango(7)">7 días</button><button class="btn sec sm" onclick="setRango(30)">30 días</button><button class="btn sm" onclick="exportar()">⬇️ Excel</button></div>
+  </div>
+  <div class="grid g4" style="margin-top:14px">
+    <div class="card kpi"><div class="lbl">Pedido vs producido</div><div class="val">${R.prod} <small>/ ${R.ped}</small></div><div class="det">Desvío ${R.prod - R.ped > 0 ? '+' : ''}${R.prod - R.ped} moldes</div></div>
+    <div class="card kpi ${R.cump !== null && Math.abs(R.cump - 100) > cfg('umbral_desvio') ? 'warn' : 'okk'}"><div class="lbl">Cumplimiento de producción</div><div class="val">${R.cump === null ? '—' : nf(R.cump) + '%'}</div><div class="det">${R.diasDesvio} día(s) fuera de ±${cfg('umbral_desvio')}%</div></div>
+    <div class="card kpi ${R.pDesc > 5 ? 'warn' : ''}"><div class="lbl">Descarte sobre producción</div><div class="val">${R.pDesc === null ? '—' : nf(R.pDesc) + '%'}</div><div class="det">${nf(R.descM)} moldes + ${R.descP} paquetes</div></div>
+    <div class="card kpi ${R.pViejo > 20 ? 'warn' : ''}"><div class="lbl">Cortados con ${cfg('dias_alerta')}+ días</div><div class="val">${R.cortViejo} <small>moldes</small></div><div class="det">${R.pViejo === null ? '' : nf(R.pViejo) + '% de lo cortado · espera prom. ' + nf(R.esperaProm) + ' días'}</div></div>
+    <div class="card kpi"><div class="lbl">Rendimiento de corte</div><div class="val">${R.rend === null ? '—' : nf(R.rend) + '%'}</div><div class="det">${R.paq} paquetes de ${R.cort} moldes</div></div>
+    <div class="card kpi"><div class="lbl">Despachado</div><div class="val">${R.desp} <small>paquetes</small></div><div class="det">Stock actual: ${R.stockP} moldes sin cortar · ${R.stockT} paquetes</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><b>Pedido vs producido por día</b><canvas id="ch1"></canvas></div>
+    <div class="card"><b>Stock al cierre de cada día</b><canvas id="ch2"></canvas></div>
+    <div class="card"><b>Descartes por motivo (moldes eq.)</b><canvas id="ch3"></canvas></div>
+    <div class="card"><b>Descartes por etapa (moldes eq.)</b><canvas id="ch4"></canvas></div>
+  </div>
+  <h2>Detalle diario</h2>
+  <div class="card tw"><table><thead><tr><th>Fecha</th><th class="n">Pedido</th><th class="n">Producido</th><th class="n">Desvío</th><th class="n">Cumpl.</th><th class="n">Cortado</th><th class="n">Paquetes</th><th class="n">Descarte (m. eq.)</th><th class="n">Despachado</th><th class="n">Stock s/cortar</th><th class="n">Stock paq.</th></tr></thead><tbody>
+  ${R.dias.map(d => `<tr><td>${fmtDL(d.f)}</td><td class="n">${d.ped}</td><td class="n">${d.prod}</td><td class="n">${d.prod - d.ped ? `<span class="pill ${d.ped && Math.abs(pct(d.prod - d.ped, d.ped)) > cfg('umbral_desvio') ? 'warn' : ''}">${d.prod - d.ped > 0 ? '+' : ''}${d.prod - d.ped}</span>` : '0'}</td><td class="n">${d.ped ? nf(pct(d.prod, d.ped)) + '%' : '—'}</td><td class="n">${d.cort}</td><td class="n">${d.paq}</td><td class="n">${nf(d.desc)}</td><td class="n">${d.desp}</td><td class="n">${d.sp}</td><td class="n">${d.st}</td></tr>`).join('')}
+  </tbody></table></div>
+  <h2>Resumen semanal</h2>
+  <div class="card tw"><table><thead><tr><th>Semana (lunes)</th><th class="n">Pedido</th><th class="n">Producido</th><th class="n">Cumpl.</th><th class="n">Descarte m. eq.</th><th class="n">% descarte</th><th class="n">Despachado</th></tr></thead><tbody>
+  ${R.semanas.map(s => `<tr><td>${fmtD(s.k)}</td><td class="n">${s.ped}</td><td class="n">${s.prod}</td><td class="n">${s.ped ? nf(pct(s.prod, s.ped)) + '%' : '—'}</td><td class="n">${nf(s.desc)}</td><td class="n">${s.prod ? nf(pct(s.desc, s.prod)) + '%' : '—'}</td><td class="n">${s.desp}</td></tr>`).join('')}
+  </tbody></table></div>
+  <h2>Descartes: motivo × etapa (moldes eq.)</h2>
+  <div class="card tw"><table><thead><tr><th>Motivo</th>${Object.values(ETAPAS).map(e => `<th class="n">${e}</th>`).join('')}<th class="n">Total</th></tr></thead><tbody>
+  ${Object.entries(R.mxe).sort((a, b) => b[1].tot - a[1].tot).map(([k, o]) => `<tr><td>${esc(k)}</td>${Object.keys(ETAPAS).map(e => `<td class="n">${o[e] ? nf(o[e]) : '—'}</td>`).join('')}<td class="n"><b>${nf(o.tot)}</b></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Sin descartes en el período</td></tr>'}
+  </tbody></table></div>`;
+};
+function setRango(n) { UI.F.hasta = today(); UI.F.desde = addDays(today(), -(n - 1)); render(); }
+function informe(F) {
+  const C = calc(), okV = vid => !F.v || vid === F.v, inR = f => f >= F.desde && f <= F.hasta;
+  const peds = S.pedidos.filter(p => !p.anulado && inR(p.fecha) && okV(p.variedad_id));
+  const lots = C.lots.filter(l => inR(l.fecha) && okV(l.variedad_id));
+  const movs = C.movs.filter(m => inR(m.fecha) && okV(lotVar(m)));
+  const desc = movs.filter(m => m.tipo === 'descarte' && (!F.etapa || m.etapa === F.etapa));
+  const cortes = movs.filter(m => m.tipo === 'corte');
+  const ped = peds.reduce((s, p) => s + p.cantidad, 0), prod = lots.reduce((s, l) => s + l.moldes, 0);
+  const cort = cortes.reduce((s, m) => s + m.moldes, 0), paq = cortes.reduce((s, m) => s + m.paquetes, 0);
+  const estd = cortes.reduce((s, m) => s + m.moldes * Number(vById(lotVar(m)).rendimiento), 0);
+  const descM = desc.filter(m => m.etapa !== 'terminado').reduce((s, m) => s + m.moldes, 0), descP = desc.filter(m => m.etapa === 'terminado').reduce((s, m) => s + m.paquetes, 0);
+  const descEq = desc.reduce((s, m) => s + moldesEq(m), 0);
+  let cortViejo = 0, espera = 0; cortes.forEach(m => { const L = C.byId[m.lote_id]; const e = diffDays(m.fecha, L.fecha); espera += e * m.moldes; if (e >= cfg('dias_alerta')) cortViejo += m.moldes; });
+  // series diarias + stock al cierre (reconstruido con todos los movimientos hasta ese día)
+  const allL = C.lots.filter(l => okV(l.variedad_id)), allM = C.movs.filter(m => okV(lotVar(m)));
+  const dias = []; let diasDesvio = 0;
+  for (let f = F.desde; f <= F.hasta; f = addDays(f, 1)) {
+    const pe = peds.filter(p => p.fecha === f).reduce((s, p) => s + p.cantidad, 0), pr = lots.filter(l => l.fecha === f).reduce((s, l) => s + l.moldes, 0);
+    if (dow(f) === 0 && !pe && !pr && !movs.some(m => m.fecha === f)) continue;
+    const mf = movs.filter(m => m.fecha === f);
+    const sp = allL.filter(l => l.fecha <= f).reduce((s, l) => s + l.moldes, 0) - allM.filter(m => m.fecha <= f).reduce((s, m) => s + (m.tipo === 'corte' || (m.tipo === 'descarte' && m.etapa !== 'terminado') ? m.moldes : m.tipo === 'ajuste' && m.etapa !== 'terminado' ? -m.moldes : 0), 0);
+    const st = allM.filter(m => m.fecha <= f).reduce((s, m) => s + (m.tipo === 'corte' ? m.paquetes : (m.tipo === 'despacho' || (m.tipo === 'descarte' && m.etapa === 'terminado')) ? -m.paquetes : m.tipo === 'ajuste' && m.etapa === 'terminado' ? m.paquetes : 0), 0);
+    if (pe && Math.abs(pct(pr - pe, pe)) > cfg('umbral_desvio')) diasDesvio++;
+    dias.push({ f, ped: pe, prod: pr, cort: mf.filter(m => m.tipo === 'corte').reduce((s, m) => s + m.moldes, 0), paq: mf.filter(m => m.tipo === 'corte').reduce((s, m) => s + m.paquetes, 0), desc: mf.filter(m => m.tipo === 'descarte' && (!F.etapa || m.etapa === F.etapa)).reduce((s, m) => s + moldesEq(m), 0), desp: mf.filter(m => m.tipo === 'despacho').reduce((s, m) => s + m.paquetes, 0), sp, st });
+  }
+  const sem = {}; dias.forEach(d => { const k = addDays(d.f, -((dow(d.f) + 6) % 7)); const o = sem[k] || (sem[k] = { k, ped: 0, prod: 0, desc: 0, desp: 0 }); o.ped += d.ped; o.prod += d.prod; o.desc += d.desc; o.desp += d.desp; });
+  const mxe = {}; desc.forEach(m => { const k = m.motivo || 'Sin motivo'; const o = mxe[k] || (mxe[k] = { tot: 0 }); const q = moldesEq(m); o[m.etapa] = (o[m.etapa] || 0) + q; o.tot += q; });
+  const porEt = {}; desc.forEach(m => porEt[m.etapa] = (porEt[m.etapa] || 0) + moldesEq(m));
+  return { ped, prod, cump: pct(prod, ped), diasDesvio, cort, paq, rend: pct(paq, estd), descM, descP, pDesc: pct(descEq, prod), cortViejo, pViejo: pct(cortViejo, cort), esperaProm: cort ? espera / cort : 0, desp: movs.filter(m => m.tipo === 'despacho').reduce((s, m) => s + m.paquetes, 0), stockP: C.lots.filter(l => okV(l.variedad_id)).reduce((s, l) => s + Math.max(l.pend, 0), 0), stockT: C.lots.filter(l => okV(l.variedad_id)).reduce((s, l) => s + Math.max(l.disp, 0), 0), dias, semanas: Object.values(sem), mxe, porEt, peds, lots, movs };
+}
+AFTER.informes = () => {
+  if (!window.Chart) return;
+  const R = informe(UI.F), lab = R.dias.map(d => fmtD(d.f));
+  const base = { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true, font: { family: 'Inter' } } } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(14,28,58,.07)' } }, x: { grid: { display: false } } } };
+  CHARTS.push(new Chart($('#ch1'), { type: 'bar', data: { labels: lab, datasets: [{ label: 'Pedido', data: R.dias.map(d => d.ped), backgroundColor: '#C9D6E6', borderRadius: 6 }, { label: 'Producido', data: R.dias.map(d => d.prod), backgroundColor: '#0E1C3A', borderRadius: 6 }] }, options: base }));
+  CHARTS.push(new Chart($('#ch2'), { type: 'line', data: { labels: lab, datasets: [{ label: 'Moldes sin cortar', data: R.dias.map(d => d.sp), borderColor: '#E9743A', backgroundColor: 'rgba(233,116,58,.18)', fill: true, tension: .35 }, { label: 'Paquetes envasados', data: R.dias.map(d => d.st), borderColor: '#1F3A6B', backgroundColor: 'rgba(31,58,107,.12)', fill: true, tension: .35 }] }, options: base }));
+  const mk = Object.entries(R.mxe).sort((a, b) => b[1].tot - a[1].tot);
+  CHARTS.push(new Chart($('#ch3'), { type: 'bar', data: { labels: mk.map(x => x[0]), datasets: [{ label: 'Moldes eq.', data: mk.map(x => Math.round(x[1].tot * 10) / 10), backgroundColor: '#C8473B', borderRadius: 6 }] }, options: { ...base, plugins: { legend: { display: false } } } }));
+  CHARTS.push(new Chart($('#ch4'), { type: 'bar', data: { labels: Object.values(ETAPAS), datasets: [{ label: 'Moldes eq.', data: Object.keys(ETAPAS).map(k => Math.round((R.porEt[k] || 0) * 10) / 10), backgroundColor: ['#CDA85E', '#E9743A', '#1F3A6B'], borderRadius: 6 }] }, options: { ...base, plugins: { legend: { display: false } } } }));
+};
+function exportar() {
+  if (!window.XLSX) return toast('No se pudo cargar el exportador (sin internet)', true);
+  const F = UI.F || { desde: addDays(today(), -29), hasta: today(), v: '', etapa: '' }, R = informe(F), C = calc();
+  const wb = XLSX.utils.book_new(), add = (n, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ '': 'Sin datos' }]), n);
+  add('Resumen diario', R.dias.map(d => ({ Fecha: d.f, Pedido: d.ped, Producido: d.prod, Desvío: d.prod - d.ped, 'Cumplimiento %': d.ped ? pct(d.prod, d.ped) : '', 'Moldes cortados': d.cort, 'Paquetes obtenidos': d.paq, 'Descarte (moldes eq.)': Math.round(d.desc * 10) / 10, 'Paquetes despachados': d.desp, 'Stock sin cortar (cierre)': d.sp, 'Stock paquetes (cierre)': d.st })));
+  add('Lotes', R.lots.map(l => ({ 'Fecha producción': l.fecha, Lote: 'L' + l.lote, Variedad: vById(l.variedad_id).nombre, Pedido: pedidoDe(l.fecha, l.variedad_id)?.cantidad ?? '', Producidos: l.moldes, 'Motivo desvío': l.motivo_desvio || '', Cortados: l.cort, 'Paquetes obtenidos': l.paq, 'Desc. antes del corte': l.descPend, 'Desc. en corte': l.descCorte, 'Desc. paquetes': l.descTerm, Despachados: l.desp, 'Ajustes moldes': l.ajP, 'Ajustes paquetes': l.ajT, 'Pendientes de corte': l.pend, 'Paquetes disponibles': l.disp, 'Primer corte': l.primerCorte || '', Responsable: l.responsable || '' })));
+  add('Pedidos', R.peds.map(p => ({ Fecha: p.fecha, Variedad: vById(p.variedad_id).nombre, Cantidad: p.cantidad, Responsable: p.responsable || '' })));
+  add('Movimientos', S.movs.filter(m => m.fecha >= F.desde && m.fecha <= F.hasta && (!F.v || lotVar(m) === F.v)).map(m => { const l = S.lotes.find(x => x.id === m.lote_id) || {}; return { Fecha: m.fecha, Hora: m.created_at ? new Date(m.created_at).toLocaleTimeString('es-UY') : '', Tipo: TIPOS[m.tipo], Etapa: m.etapa ? ETAPAS[m.etapa] : '', Lote: l.lote ? 'L' + l.lote : '', 'Fecha lote': l.fecha || '', Variedad: vById(l.variedad_id).nombre, Moldes: m.moldes, Paquetes: m.paquetes, Motivo: m.motivo || '', Destino: m.destino || '', Obs: m.obs || '', Usuario: m.responsable || '', Anulado: m.anulado ? 'SÍ (' + (m.anulado_por || '') + ')' : '' }; }));
+  add('Descartes motivo-etapa', Object.entries(R.mxe).map(([k, o]) => ({ Motivo: k, ...Object.fromEntries(Object.entries(ETAPAS).map(([e, n]) => [n, Math.round((o[e] || 0) * 10) / 10])), Total: Math.round(o.tot * 10) / 10 })));
+  XLSX.writeFile(wb, `pan-molde_${F.desde}_a_${F.hasta}.xlsx`);
+}
+
+/* ===================== HISTORIAL ===================== */
+V.historial = () => {
+  const HF = UI.H || (UI.H = { desde: addDays(today(), -6), hasta: today(), tipo: '' });
+  const inR = f => f >= HF.desde && f <= HF.hasta;
+  const movs = S.movs.filter(m => inR(m.fecha) && (!HF.tipo || m.tipo === HF.tipo));
+  const prods = (!HF.tipo || HF.tipo === 'produccion') ? S.lotes.filter(l => inR(l.fecha)) : [];
+  return `${H(9,'Historial','Todo lo','registrado')}<div class="sub">Todos los movimientos. Nada se borra: los registros anulados quedan tachados.</div>
+  <div class="card filters">
+    <div><label class="f">Desde</label><input type="date" value="${HF.desde}" onchange="UI.HF.desde=this.value;render()"></div>
+    <div><label class="f">Hasta</label><input type="date" value="${HF.hasta}" onchange="UI.HF.hasta=this.value;render()"></div>
+    <div><label class="f">Tipo</label><select onchange="UI.HF.tipo=this.value;render()"><option value="">Todos</option>${Object.entries(TIPOS).filter(([k]) => k !== 'pedido').map(([k, l]) => `<option value="${k}" ${HF.tipo === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div><button class="btn sm" onclick="exportCSV()">⬇️ CSV</button></div>
+  </div>
+  ${prods.length ? `<h2>Producción (lotes)</h2><div class="card tw"><table><thead><tr><th>Fecha</th><th>Lote</th><th>Variedad</th><th class="n">Moldes</th><th>Motivo desvío</th><th>Usuario</th><th></th></tr></thead><tbody>
+  ${prods.sort((a, b) => b.fecha.localeCompare(a.fecha)).map(l => `<tr class="${l.anulado ? 'anul' : ''}"><td>${fmtDL(l.fecha)}</td><td>L${l.lote}</td><td>${vDot(l.variedad_id)} ${esc(vById(l.variedad_id).nombre)}</td><td class="n">${l.moldes}</td><td class="small">${esc(l.motivo_desvio || '')}</td><td class="small muted">${esc(l.responsable || '')}</td><td>${l.anulado || !canAnular(l) ? '' : `<button class="btn ghost sm" onclick="anularLote('${l.id}')">Anular</button>`}</td></tr>`).join('')}</tbody></table></div>` : ''}
+  ${HF.tipo !== 'produccion' ? `<h2>Movimientos</h2>${movTable(movs, true)}` : ''}`;
+};
+async function anularLote(id) {
+  if (needUser()) return;
+  if (!canAnular(S.lotes.find(l => l.id === id))) return toast('Solo podés anular tus propios registros del día.', true);
+  if (S.movs.some(m => m.lote_id === id && !m.anulado)) return toast('El lote tiene cortes/descartes/despachos activos. Anulá esos primero o corregí la cantidad desde Producción.', true);
+  if (!confirm('¿Anular este registro de producción?')) return;
+  await safe(async () => { await DB.upd('lotes', id, { anulado: true, anulado_por: user() }); toast('Producción anulada'); render(); });
+}
+function exportCSV() {
+  const HF = UI.H, rows = [['fecha', 'hora', 'tipo', 'etapa', 'lote', 'fecha_lote', 'variedad', 'moldes', 'paquetes', 'motivo', 'destino', 'obs', 'usuario', 'anulado']];
+  S.lotes.filter(l => l.fecha >= HF.desde && l.fecha <= HF.hasta).forEach(l => rows.push([l.fecha, '', 'produccion', '', 'L' + l.lote, l.fecha, vById(l.variedad_id).nombre, l.moldes, '', l.motivo_desvio || '', '', l.obs || '', l.responsable || '', l.anulado ? 'si' : '']));
+  S.movs.filter(m => m.fecha >= HF.desde && m.fecha <= HF.hasta).forEach(m => { const l = S.lotes.find(x => x.id === m.lote_id) || {}; rows.push([m.fecha, m.created_at ? new Date(m.created_at).toLocaleTimeString('es-UY') : '', m.tipo, m.etapa || '', 'L' + l.lote, l.fecha, vById(l.variedad_id).nombre, m.moldes, m.paquetes, m.motivo || '', m.destino || '', m.obs || '', m.responsable || '', m.anulado ? 'si' : '']); });
+  const csv = '﻿' + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = `historial-pan-molde_${HF.desde}_a_${HF.hasta}.csv`; a.click();
+}
+
+/* ===================== CONFIGURACIÓN ===================== */
+V.config = () => `${H(11,'Configuración','Ajustes','del sistema')}<div class="sub">Variedades, motivos de descarte y umbrales de alerta.</div>
+  <div class="grid g2">
+  <div class="card"><b>Variedades de pan</b><div class="small muted">Rendimiento = paquetes estándar que salen de un molde.</div>
+    <div class="cfg-row small muted" style="border:0"><span>Nombre</span><span>Paq./molde</span><span>Orden</span><span></span></div>
+    ${S.variedades.slice().sort((a, b) => a.orden - b.orden).map(v => `<div class="cfg-row"><input type="text" id="vn_${v.id}" value="${esc(v.nombre)}"><input type="number" step="0.1" id="vr_${v.id}" value="${v.rendimiento}"><input type="number" id="vo_${v.id}" value="${v.orden}"><div class="row" style="gap:4px"><button class="btn sm" onclick="guardarVar('${v.id}')">✓</button><button class="btn sec sm" onclick="toggleAct('variedades','${v.id}')">${v.activo ? 'Desactivar' : 'Activar'}</button></div></div>`).join('')}
+    <div class="cfg-row"><input type="text" id="vn_new" placeholder="Nueva variedad"><input type="number" step="0.1" id="vr_new" value="1"><input type="number" id="vo_new" value="${S.variedades.length + 1}"><button class="btn sm" onclick="guardarVar()">+ Agregar</button></div>
+  </div>
+  <div class="card"><b>Motivos de descarte</b>
+    ${S.motivos.slice().sort((a, b) => a.orden - b.orden).map(m => `<div class="cfg-row m"><span style="${m.activo ? '' : 'opacity:.45;text-decoration:line-through'}">${esc(m.nombre)}</span><span></span><button class="btn sec sm" onclick="toggleAct('motivos','${m.id}')">${m.activo ? 'Desactivar' : 'Activar'}</button></div>`).join('')}
+    <div class="cfg-row m"><input type="text" id="mo_new" placeholder="Nuevo motivo"><span></span><button class="btn sm" onclick="nuevoSimple('motivos','mo_new')">+ Agregar</button></div>
+  </div>
+  <div class="card"><b>Umbrales de alerta</b>
+    ${[['dias_alerta', 'Días de espera para alerta naranja'], ['dias_critico', 'Días de espera para alerta roja'], ['vida_util', 'Vida útil del pan envasado (días desde el corte)'], ['umbral_desvio', 'Desvío de producción tolerado (%)'], ['rend_min', 'Rendimiento de corte mínimo (% del estándar)']].map(([k, l]) => `<label class="f">${l}</label><input type="number" id="cf_${k}" value="${cfg(k)}" style="max-width:140px">`).join('')}
+    <div style="margin-top:14px"><button class="btn" onclick="guardarCfg()">Guardar umbrales</button></div>
+  </div>
+  <div class="card"><b>Conexión</b><div style="margin-top:8px">${LIVE ? '<span class="pill ok">Conectado a Supabase · datos compartidos y en tiempo real</span>' : '<span class="pill warn">MODO DEMO · los datos se guardan solo en este navegador</span><p class="small muted" style="margin-top:8px">Para usarla en serio: ejecutar el SQL en Supabase y pegar la anon key en el archivo (constante SUPABASE_KEY).</p><div class="row" style="margin-top:12px"><button class="btn sec" onclick="seedDemo()">Cargar datos de ejemplo</button><button class="btn danger" onclick="if(confirm(\'¿Borrar todos los datos demo?\')){localStorage.removeItem(\'pm_demo\');DB.load().then(render)}">Borrar datos demo</button></div>'}</div></div>
+  </div>`;
+async function guardarVar(id) {
+  const k = id || 'new', nombre = document.getElementById('vn_' + k).value.trim(), r = Number(document.getElementById('vr_' + k).value), o = parseInt(document.getElementById('vo_' + k).value) || 0;
+  if (!nombre) return toast('Falta el nombre', true); if (!(r > 0)) return toast('El rendimiento debe ser mayor a 0', true);
+  if (S.variedades.some(v => v.nombre.toLowerCase() === nombre.toLowerCase() && v.id !== id)) return toast('Ya existe una variedad con ese nombre', true);
+  await safe(async () => { if (id) await DB.upd('variedades', id, { nombre, rendimiento: r, orden: o }); else await DB.ins('variedades', { nombre, rendimiento: r, orden: o, activo: true }); toast('✅ Variedad guardada'); render(); });
+}
+async function toggleAct(k, id) { const o = S[k].find(x => x.id === id); await safe(async () => { await DB.upd(k, id, { activo: !o.activo }); render(); }); }
+async function nuevoSimple(k, inp) {
+  const n = document.getElementById(inp).value.trim(); if (!n) return;
+  if (S[k].some(x => x.nombre.toLowerCase() === n.toLowerCase())) return toast('Ya existe', true);
+  await safe(async () => { await DB.ins(k, k === 'motivos' ? { nombre: n, activo: true, orden: S.motivos.length + 1 } : { nombre: n, activo: true }); toast('✅ Agregado'); render(); });
+}
+async function guardarCfg() {
+  await safe(async () => { for (const k of ['dias_alerta', 'dias_critico', 'vida_util', 'umbral_desvio', 'rend_min']) { const v = Number(document.getElementById('cf_' + k).value); if (!(v >= 0)) throw new Error('Valor inválido en ' + k); if (v !== cfg(k)) await DB.setCfg(k, v); } toast('✅ Umbrales guardados'); render(); });
+}
+
+/* ===================== usuario / modal ===================== */
+function modal(html) { $('#modal').innerHTML = `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
+function closeModal() { $('#modal').innerHTML = ''; }
+
+/* ---------- ingreso con PIN ---------- */
+let LG = { step: 'users', pid: null, pin: '', fails: 0, lockUntil: 0 };
+function renderLogin() {
+  const el = $('#login'), admins = S.personas.filter(p => p.activo && p.rol === 'admin' && p.pin_hash);
+  if (!admins.length) {
+    el.innerHTML = `<div class="login"><div class="login-in">
+      <div class="eyebrow"><span>00</span>Primer ingreso</div><h1>Creá el usuario <em>administrador</em></h1>
+      <div class="sub">Va a poder crear al resto del personal y asignarle un rol.</div>
+      <div class="pinbox" style="max-width:440px;margin:0">
+        <label class="f" style="margin-top:0">Nombre</label><input type="text" id="ad_n" placeholder="Ej. Gabi">
+        <label class="f">PIN de 4 números</label><input type="password" inputmode="numeric" maxlength="4" id="ad_p1" placeholder="••••">
+        <label class="f">Repetí el PIN</label><input type="password" inputmode="numeric" maxlength="4" id="ad_p2" placeholder="••••">
+        <div style="margin-top:20px"><button class="btn big" onclick="crearAdmin()">Crear y entrar</button></div>
+      </div></div></div>`;
+    return;
+  }
+  const ps = S.personas.filter(p => p.activo && p.pin_hash && ROLES[p.rol]).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  if (LG.step === 'pin' && ps.find(p => p.id === LG.pid)) {
+    const p = ps.find(p => p.id === LG.pid);
+    el.innerHTML = `<div class="login"><div class="login-in">
+      <div class="pinbox" id="pinbox">
+        <div class="row" style="gap:12px"><div class="avatar">${esc(p.nombre[0].toUpperCase())}</div><div><div style="font-family:var(--font-title);font-weight:700;font-size:18px">${esc(p.nombre)}</div><div class="small muted">${ROLES[p.rol].label}</div></div></div>
+        <div class="pindots">${[0, 1, 2, 3].map(i => `<i class="${i < LG.pin.length ? 'on' : ''}"></i>`).join('')}</div>
+        <div id="pinmsg" class="small" style="text-align:center;min-height:22px;margin:-10px 0 8px;color:var(--crit)">${LG.lockUntil > Date.now() ? 'Demasiados intentos. Esperá unos segundos.' : ''}</div>
+        <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button onclick="pinKey('${n}')">${n}</button>`).join('')}<button class="k2" onclick="LG.step='users';LG.pin='';render()">← Volver</button><button onclick="pinKey('0')">0</button><button class="k2" onclick="LG.pin=LG.pin.slice(0,-1);render()">Borrar</button></div>
+        ${LIVE ? '' : '<div class="small muted" style="text-align:center;margin-top:14px">Modo demo: el PIN de todos es <b>1234</b></div>'}
+      </div></div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="login"><div class="login-in">
+    <div class="eyebrow"><span>🍞</span>Panificadora Amsterdam</div><h1>Pan de molde, <em>bajo control</em></h1>
+    <div class="sub">Tocá tu nombre para ingresar.</div>
+    <div class="ucards">${ps.map(p => `<button class="ucard" onclick="LG.step='pin';LG.pid='${p.id}';LG.pin='';render()"><div class="avatar" style="background:${ROLES[p.rol].color}">${esc(p.nombre[0].toUpperCase())}</div><b>${esc(p.nombre)}</b><small>${ROLES[p.rol].label}</small></button>`).join('')}</div>
+  </div></div>`;
+}
+document.addEventListener('keydown', e => { if (!ME() && LG.step === 'pin' && $('#pinbox')) { if (/^[0-9]$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') { LG.pin = LG.pin.slice(0, -1); render(); } } });
+async function pinKey(n) {
+  if (LG.lockUntil > Date.now()) return render();
+  if (LG.pin.length >= 4) return;
+  LG.pin += n; render();
+  if (LG.pin.length < 4) return;
+  const p = S.personas.find(x => x.id === LG.pid);
+  if (p && await hashPin(p.id, LG.pin) === p.pin_hash) {
+    localStorage.setItem('pm_sess', p.id); LG = { step: 'users', pid: null, pin: '', fails: 0, lockUntil: 0 };
+    VIEW = ROLES[p.rol].views[0]; render(); toast('Hola, ' + p.nombre);
+  } else {
+    LG.fails++; LG.pin = ''; if (LG.fails >= 5) { LG.lockUntil = Date.now() + 30000; LG.fails = 0; setTimeout(render, 30100); }
+    render(); const b = $('#pinbox'); if (b) { b.classList.add('shake'); $('#pinmsg').textContent = LG.lockUntil > Date.now() ? 'Demasiados intentos. Esperá 30 segundos.' : 'PIN incorrecto'; }
+  }
+}
+async function crearAdmin() {
+  const n = $('#ad_n').value.trim(), p1 = $('#ad_p1').value, p2 = $('#ad_p2').value;
+  if (!n) return toast('Falta el nombre', true);
+  if (!/^\d{4}$/.test(p1)) return toast('El PIN tiene que ser de 4 números', true);
+  if (p1 !== p2) return toast('Los PIN no coinciden', true);
+  await safe(async () => { const id = uid(); await DB.ins('personas', { id, nombre: n, rol: 'admin', activo: true, pin_hash: await hashPin(id, p1) }); localStorage.setItem('pm_sess', id); VIEW = 'inicio'; render(); toast('Listo, ' + n + '. Ahora creá al resto del equipo en Usuarios.'); });
+}
+function logout() { localStorage.removeItem('pm_sess'); closeModal(); LG = { step: 'users', pid: null, pin: '', fails: 0, lockUntil: 0 }; render(); }
+function menuUser() {
+  const p = ME(); if (!p) return;
+  modal(`<div class="row" style="gap:14px"><div class="avatar" style="width:52px;height:52px;font-size:20px;background:${rol().color}">${esc(p.nombre[0].toUpperCase())}</div><div><h3>${esc(p.nombre)}</h3><span class="pill">${rol().label}</span></div></div>
+  <p class="small muted" style="margin:14px 0">${rol().desc}</p>
+  <label class="f">Cambiar mi PIN</label><div class="row"><input type="password" inputmode="numeric" maxlength="4" id="mp_1" placeholder="Nuevo PIN" style="flex:1"><input type="password" inputmode="numeric" maxlength="4" id="mp_2" placeholder="Repetir" style="flex:1"><button class="btn sec sm" onclick="cambiarMiPin()">Guardar</button></div>
+  <div class="sep"></div><div class="row"><button class="btn dark" style="flex:1" onclick="logout()">Cerrar sesión</button><button class="btn sec" onclick="closeModal()">Volver</button></div>`);
+}
+async function cambiarMiPin() {
+  const a = $('#mp_1').value, b = $('#mp_2').value;
+  if (!/^\d{4}$/.test(a)) return toast('El PIN tiene que ser de 4 números', true); if (a !== b) return toast('Los PIN no coinciden', true);
+  await safe(async () => { await DB.upd('personas', ME().id, { pin_hash: await hashPin(ME().id, a) }); closeModal(); toast('✅ PIN actualizado'); });
+}
+
+/* ---------- administración de usuarios (solo admin) ---------- */
+V.usuarios = () => {
+  const ps = S.personas.slice().sort((a, b) => (b.activo - a.activo) || a.nombre.localeCompare(b.nombre));
+  return `${H(10, 'Usuarios', 'Equipo y', 'permisos')}<div class="sub">Creá usuarios, asignales un rol y reseteá su PIN. Cada registro de la app queda asociado a quien lo hizo.</div>
+  <div class="grid g2">
+    <div class="card"><b>Personas</b>
+      ${ps.map(p => `<div class="cfg-row u"><div class="row" style="gap:10px;flex-wrap:nowrap;${p.activo ? '' : 'opacity:.45'}"><div class="avatar" style="width:34px;height:34px;font-size:14px;background:${ROLES[p.rol]?.color || '#5B6478'}">${esc(p.nombre[0].toUpperCase())}</div><div><div style="font-weight:600">${esc(p.nombre)}${p.id === ME().id ? ' <span class="pill info">vos</span>' : ''}</div><div class="small muted">${p.activo ? (p.pin_hash ? 'Activo' : 'Sin PIN: no puede ingresar') : 'Desactivado'}</div></div></div>
+        <select onchange="cambiarRol('${p.id}',this.value)" ${p.activo ? '' : 'disabled'}>${Object.entries(ROLES).map(([k, r]) => `<option value="${k}" ${p.rol === k ? 'selected' : ''}>${r.label}</option>`).join('')}${ROLES[p.rol] ? '' : '<option selected>— elegir —</option>'}</select>
+        <div class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sec sm" onclick="resetPin('${p.id}')" ${p.activo ? '' : 'disabled'}>PIN</button><button class="btn ghost sm" onclick="toggleUser('${p.id}')">${p.activo ? 'Desactivar' : 'Activar'}</button></div></div>`).join('')}
+    </div>
+    <div class="card kpi dark"><div class="lbl">Nuevo usuario</div>
+      <label class="f" style="color:#fff">Nombre</label><input type="text" id="nu_n" placeholder="Ej. Marcelo">
+      <label class="f" style="color:#fff">Rol</label><select id="nu_r">${Object.entries(ROLES).map(([k, r]) => `<option value="${k}" ${k === 'sandwicheria' ? 'selected' : ''}>${r.label}</option>`).join('')}</select>
+      <label class="f" style="color:#fff">PIN inicial (4 números)</label><input type="text" inputmode="numeric" maxlength="4" id="nu_p" placeholder="Ej. 4821">
+      <div class="det" style="margin-top:8px">Pasale el PIN en persona. Después lo puede cambiar desde su nombre, arriba a la derecha.</div>
+      <div style="margin-top:18px"><button class="btn big" onclick="crearUsuario()">Crear usuario</button></div>
+    </div>
+  </div>
+  <h2>Qué puede hacer cada rol</h2>
+  <div class="card tw"><table><thead><tr><th>Rol</th><th>Alcance</th>${['pedidos', 'produccion', 'pendientes', 'sandwicheria', 'stock', 'descartes', 'informes', 'usuarios'].map(k => `<th style="text-align:center">${NAV.find(n => n[0] === k)[1].split(' ').slice(1).join(' ')}</th>`).join('')}</tr></thead><tbody>
+  ${Object.entries(ROLES).map(([k, r]) => `<tr><td><span class="rolechip" style="background:${r.color}22;color:${r.color === '#CDA85E' ? '#8A6516' : r.color}">${r.label}</span></td><td class="small muted" style="min-width:220px">${r.desc}</td>${['pedidos', 'produccion', 'pendientes', 'sandwicheria', 'stock', 'descartes', 'informes', 'usuarios'].map(v => `<td style="text-align:center">${r.views.includes(v) ? (r.soloLectura ? '<span title="Solo ver">👁</span>' : '✓') : '<span class="muted">—</span>'}</td>`).join('')}</tr>`).join('')}
+  </tbody></table><div class="small muted" style="margin-top:10px">Todos pueden anular sus propios registros del día. Administración y Supervisión pueden anular cualquier registro.</div></div>`;
+};
+const activeAdmins = () => S.personas.filter(p => p.activo && p.rol === 'admin');
+async function crearUsuario() {
+  if (ME()?.rol !== 'admin') return;
+  const n = $('#nu_n').value.trim(), r = $('#nu_r').value, pin = $('#nu_p').value.trim();
+  if (!n) return toast('Falta el nombre', true);
+  if (S.personas.some(p => p.nombre.toLowerCase() === n.toLowerCase())) return toast('Ya existe un usuario con ese nombre', true);
+  if (!/^\d{4}$/.test(pin)) return toast('El PIN tiene que ser de 4 números', true);
+  await safe(async () => { const id = uid(); await DB.ins('personas', { id, nombre: n, rol: r, activo: true, pin_hash: await hashPin(id, pin) }); toast(`✅ ${n} creado como ${ROLES[r].label}`); render(); });
+}
+async function cambiarRol(id, r) {
+  if (ME()?.rol !== 'admin') return;
+  const p = S.personas.find(x => x.id === id);
+  if (p.rol === 'admin' && r !== 'admin' && activeAdmins().length <= 1) { toast('Tiene que quedar al menos un administrador', true); return render(); }
+  await safe(async () => { await DB.upd('personas', id, { rol: r }); toast(`${p.nombre} ahora es ${ROLES[r].label}`); render(); });
+}
+async function toggleUser(id) {
+  if (ME()?.rol !== 'admin') return;
+  const p = S.personas.find(x => x.id === id);
+  if (p.id === ME().id) return toast('No podés desactivarte a vos', true);
+  if (p.activo && p.rol === 'admin' && activeAdmins().length <= 1) return toast('Tiene que quedar al menos un administrador', true);
+  await safe(async () => { await DB.upd('personas', id, { activo: !p.activo }); render(); });
+}
+function resetPin(id) {
+  const p = S.personas.find(x => x.id === id);
+  modal(`<h3>Nuevo PIN para <em>${esc(p.nombre)}</em></h3><div class="small muted">Reemplaza el anterior.</div>
+  <label class="f">PIN (4 números)</label><input type="text" inputmode="numeric" maxlength="4" id="rp_p">
+  <div class="row" style="margin-top:16px"><button class="btn" style="flex:1" onclick="guardarResetPin('${id}')">Guardar PIN</button><button class="btn sec" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function guardarResetPin(id) {
+  const pin = $('#rp_p').value.trim(); if (!/^\d{4}$/.test(pin)) return toast('El PIN tiene que ser de 4 números', true);
+  await safe(async () => { await DB.upd('personas', id, { pin_hash: await hashPin(id, pin) }); closeModal(); toast('✅ PIN actualizado'); render(); });
+}
+
+/* ===================== datos de ejemplo (solo demo) ===================== */
+function seedDemo() {
+  if (LIVE) return;
+  const b = demoBase(); b.variedades = S.variedades; b.motivos = S.motivos; b.personas = S.personas; b.config = S.config;
+  const [vB, vI] = vAct(), t = today(), rnd = (a, z) => a + Math.floor(Math.random() * (z - a + 1)), mk = () => uid();
+  const ts = (f, h) => f + 'T' + String(h).padStart(2, '0') + ':' + String(rnd(0, 59)).padStart(2, '0') + ':00';
+  const pedidos = [], lotes = [], movs = [];
+  const dias = []; for (let i = -14; i <= 0; i++) { const d = addDays(t, i); if (dow(d) !== 0) dias.push(d); }
+  for (const d of dias) for (const [v, base] of [[vB, 60], [vI, 24]]) {
+    const ped = base + rnd(-6, 6); pedidos.push({ id: mk(), fecha: d, variedad_id: v.id, cantidad: ped, responsable: 'Encargado de producción', anulado: false, created_at: ts(addDays(d, -1), 16) });
+    if (d === t && new Date().getHours() < 10) continue;
+    const prod = Math.max(0, ped + (Math.random() < .25 ? rnd(-10, 8) : rnd(-2, 2)));
+    const L = { id: mk(), fecha: d, variedad_id: v.id, lote: loteNum(d), moldes: prod, motivo_desvio: Math.abs(prod - ped) / ped > .1 ? (prod < ped ? 'Faltó personal' : 'Ajuste a la demanda') : null, responsable: 'Encargado de producción', anulado: false, created_at: ts(d, 9) };
+    lotes.push(L);
+    let rest = prod; let f = addDays(d, Math.random() < .7 ? 1 : 2); if (dow(f) === 0) f = addDays(f, 1);
+    if (Math.random() < .08) { const q = rnd(1, 3); rest -= q; movs.push({ id: mk(), tipo: 'descarte', etapa: 'pendiente', lote_id: L.id, fecha: f, moldes: q, paquetes: 0, motivo: 'Problema de cocción', responsable: 'Sandwichería', anulado: false, created_at: ts(f, 7) }); }
+    while (rest > 0 && f <= t) {
+      const c = Math.min(rest, Math.random() < .6 ? rest : rnd(Math.ceil(rest / 2), rest)), roto = Math.random() < .3 ? Math.min(c, rnd(1, 2)) : 0, ok = c - roto;
+      if (ok) movs.push({ id: mk(), tipo: 'corte', etapa: 'corte', lote_id: L.id, fecha: f, moldes: ok, paquetes: Math.round(ok * v.rendimiento * (Math.random() < .2 ? .9 : 1)), responsable: 'Sandwichería', anulado: false, created_at: ts(f, 8) });
+      if (roto) movs.push({ id: mk(), tipo: 'descarte', etapa: 'corte', lote_id: L.id, fecha: f, moldes: roto, paquetes: 0, motivo: 'Rotura durante el corte', responsable: 'Sandwichería', anulado: false, created_at: ts(f, 8) });
+      rest -= c; f = addDays(f, 1); if (dow(f) === 0) f = addDays(f, 1);
+    }
+  }
+  S = { ...b, pedidos, lotes, movs }; VER++;
+  // despachos FIFO día a día
+  for (const d of dias) for (const v of [vB, vI]) {
+    const av = l => movs.filter(m => m.lote_id === l.id && m.fecha <= d).reduce((s, m) => s + (m.tipo === 'corte' ? m.paquetes : (m.tipo === 'despacho' || (m.tipo === 'descarte' && m.etapa === 'terminado')) ? -m.paquetes : 0), 0);
+    const disp = calc().lots.filter(l => l.variedad_id === v.id).map(l => [l, av(l)]).filter(x => x[1] > 0);
+    let q = Math.round(disp.reduce((s, x) => s + x[1], 0) * (d === t ? .3 : .85));
+    for (const [l, a] of disp) { if (q <= 0) break; const x = Math.min(q, a); movs.push({ id: mk(), tipo: 'despacho', etapa: 'terminado', lote_id: l.id, fecha: d, moldes: 0, paquetes: x, destino: ['Camión 1', 'Camión 2', 'Camión 3'][rnd(0, 2)], grupo: d + v.id, responsable: 'Recepción', anulado: false, created_at: ts(d, 10) }); q -= x; }
+    if (Math.random() < .2) { const l = calc().lots.find(l => l.variedad_id === v.id && av(l) >= 4); if (l) movs.push({ id: mk(), tipo: 'descarte', etapa: 'terminado', lote_id: l.id, fecha: d, moldes: 0, paquetes: rnd(1, 4), motivo: 'Devolución / sobrante', responsable: 'Recepción', anulado: false, created_at: ts(d, 18) }); }
+    VER++;
+  }
+  demoSave(); VER++; toast('Datos de ejemplo cargados (2 semanas)'); go('inicio');
+}
+
+/* ===================== arranque ===================== */
+let reloadT = null, pendingRefresh = false;
+function scheduleReload() { clearTimeout(reloadT); reloadT = setTimeout(async () => { try { await DB.load(); if (!ME()) return render(); const a = document.activeElement; if (a && ['INPUT', 'SELECT', 'TEXTAREA'].includes(a.tagName) || $('#modal').innerHTML) { pendingRefresh = true; return; } render(); } catch (e) { console.error(e); } }, 600); }
+document.addEventListener('focusout', () => setTimeout(() => { if (pendingRefresh && !document.activeElement?.matches('input,select,textarea') && !$('#modal').innerHTML) { pendingRefresh = false; render(); } }, 300));
+
+(async function init() {
+  $('#mode').textContent = LIVE ? 'EN LÍNEA' : 'DEMO'; $('#mode').className = 'badge-mode' + (LIVE ? ' live' : '');
+  try {
+    if (LIVE) {
+      sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      await DB.load();
+      sb.channel('pm').on('postgres_changes', { event: '*', schema: 'public' }, p => { if (p.table && p.table.startsWith('pm_')) scheduleReload(); }).subscribe();
+      setInterval(scheduleReload, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleReload(); });
+    } else await DB.load();
+    render();
+
+  } catch (e) {
+    console.error(e);
+    $('#view').innerHTML = `<div class="empty"><b>No se pudo conectar con la base de datos.</b><br><br>${esc(e.message || e)}<br><br>Revisá que se haya ejecutado el SQL en Supabase y que la key sea la anon legacy (eyJ...).<br><br><button class="btn" onclick="location.reload()">Reintentar</button></div>`;
+  }
+})();
+</script>
+</body>
+</html>
