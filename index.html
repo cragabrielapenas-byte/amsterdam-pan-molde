@@ -208,6 +208,14 @@ td.stg .pill{margin-top:3px}
 .ml-l{font-family:var(--font-title);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--primary-3);margin-bottom:4px;white-space:nowrap}
 .ml-l .sn{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font-size:9px;margin-right:3px}
 @media(max-width:760px){.mcards{display:block}.flujo-card{display:none}}
+table.flujo th.mine{color:var(--accent)}
+table.flujo th.mine .tu{font-size:9.5px;letter-spacing:.14em;color:var(--accent);font-weight:700;margin-top:2px}
+table.flujo td.mine{background:rgba(233,116,58,.07)}
+.cbtn .fp{font-size:11px;color:var(--muted);font-family:var(--font-body)}
+.cbtn.lock{opacity:.75}
+.cbtn.ed.pend{border:2px solid var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(233,116,58,.15)}
+.cbtn.ed.pend .cargar::before{content:'● ';font-size:10px}
+.tarea h3 em{font-family:var(--font-accent);font-style:italic;font-weight:500;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -283,17 +291,8 @@ const user = () => ME()?.nombre || '';
 const rol = () => ROLES[ME()?.rol] || null;
 const canView = v => !!rol() && rol().views.includes(v);
 const esJefe = () => ['admin', 'supervisor'].includes(ME()?.rol);
-// Un encargado puede cargar/corregir su paso mientras el paso siguiente esté vacío. Admin/supervisión siempre.
-function canEdit(stageK, row, fecha) {
-  if (!rol() || !rol().edita.includes(stageK)) return false;
-  const f = row?.fecha || fecha;
-  if (stageK !== 'pedido' && f && f > today()) return false;
-  if (esJefe()) return true;
-  const i = STAGES.findIndex(s => s.k === stageK), next = STAGES[i + 1];
-  if (next && row && isNum(row[next.k])) return false;
-  if (stageK === 'cortado' && (!row || !isNum(row.producido))) return false;
-  return true;
-}
+// Cada encargado carga y corrige SOLO su columna, en cualquier lote. Admin/supervisión: todas.
+function canEdit(stageK) { return !!rol() && rol().edita.includes(stageK); }
 async function hashPin(id, pin) {
   const txt = 'pm|' + id + '|' + pin;
   if (crypto.subtle) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
@@ -364,17 +363,22 @@ const desvNivel = p => p === null ? '' : Math.abs(p) > cfg('umbral_desvio') ? 'w
 const descNivel = p => p === null ? '' : p > cfg('umbral_descarte') * 2 ? 'crit' : p > cfg('umbral_descarte') ? 'warn' : 'ok';
 const signo = n => (n > 0 ? '+' : '') + nf(n);
 
-async function guardarValor(fecha, vid, stageK, val) {
-  const r = fila(fecha, vid), now = new Date().toISOString();
+// Fecha en que se registró cada paso (por defecto hoy, editable si se cargó tarde)
+const fechaPaso = (r, k) => !r ? null : k === 'cortado' ? (r.fecha_corte || (r.cortado_at ? localDay(r.cortado_at) : null)) : (r[k + '_at'] ? localDay(r[k + '_at']) : null);
+async function guardarValor(fecha, vid, stageK, val, fechaReg) {
+  const r = fila(fecha, vid), t = today();
+  fechaReg = fechaReg || t;
   if (dow(fecha) === 0) throw new Error('Los domingos no hay lote');
-  if (stageK !== 'pedido' && val !== null && fecha > today()) throw new Error('No se puede cargar producción ni corte de un día que todavía no llegó');
-  if (stageK === 'cortado') {
-    if (!r || !isNum(r.producido)) throw new Error('Primero hay que cargar lo producido');
-    if (val !== null && val > r.producido) throw new Error(`No puede haber más cortados (${val}) que producidos (${r.producido})`);
+  if (val !== null) {
+    if (fechaReg > t) throw new Error('La fecha de registro no puede ser futura');
+    if (stageK !== 'pedido' && fechaReg < fecha) throw new Error(`La fecha no puede ser anterior al día del lote (${fmtD(fecha)})`);
+    if (stageK === 'cortado' && r && isNum(r.producido) && val > r.producido) throw new Error(`No puede haber más cortados (${val}) que producidos (${r.producido})`);
+    if (stageK === 'producido' && r && isNum(r.cortado) && val < r.cortado) throw new Error(`Ya figuran ${r.cortado} moldes cortados en este lote`);
   }
-  if (stageK === 'producido' && val !== null && r && isNum(r.cortado) && val < r.cortado) throw new Error(`Ya se cortaron ${r.cortado} moldes de este lote`);
-  const patch = { [stageK]: val, [stageK + '_por']: val === null ? null : user(), [stageK + '_at']: val === null ? null : now };
-  if (stageK === 'cortado') patch.fecha_corte = val === null ? null : (r.fecha_corte && r.cortado !== null ? r.fecha_corte : today());
+  const hora = new Date().toTimeString().slice(0, 8);
+  const ts = val === null ? null : new Date(`${fechaReg}T${hora}`).toISOString();
+  const patch = { [stageK]: val, [stageK + '_por']: val === null ? null : user(), [stageK + '_at']: ts };
+  if (stageK === 'cortado') patch.fecha_corte = val === null ? null : fechaReg;
   if (r) return DB.upd('flujo', r.id, patch);
   if (val === null) return;
   return DB.ins('flujo', { fecha, variedad_id: vid, lote: dow(fecha), ...patch });
@@ -419,7 +423,7 @@ V.flujo = () => {
   const viejosAnt = pend.filter(r => r.fecha < ws);
   return `${H(1, 'Flujo de lotes', 'Cada lote,', 'paso a paso')}
   <div class="sub">Pedido → producido → cortado y envasado. Cada encargado completa su paso y los desvíos se calculan solos.</div>
-  ${tarea()}
+  ${aviso()}
   <div class="grid g4" style="margin-top:8px">
     <div class="card kpi ${cump === null ? '' : desvNivel(cump - 100) === 'warn' ? 'warn' : 'okk'}"><div class="lbl">Cumplimiento producción</div><div class="val">${cump === null ? '—' : nf(cump) + '<small>%</small>'}</div><div class="det">${tot('producido')} producidos de ${tot('pedido')} pedidos (semana)</div></div>
     <div class="card kpi ${descNivel(descP) === 'crit' ? 'crit' : descNivel(descP) === 'warn' ? 'warn' : descP !== null ? 'okk' : ''}"><div class="lbl">Descarte</div><div class="val">${descP === null ? '—' : nf(descP) + '<small>%</small>'}</div><div class="det">${descM} moldes descartados en lotes cerrados</div></div>
@@ -433,18 +437,20 @@ V.flujo = () => {
   </div>
   <div class="mcards">${dias.map(d => mLote(d, vs)).join('')}</div>
   <div class="card tw flujo-card"><table class="flujo">
-    <thead><tr><th>Lote</th><th>Variedad</th>${STAGES.map(s => `<th class="stg"><span class="sn">${s.n}</span>${s.label}</th>`).join('')}<th class="stg">Descarte</th><th>Estado</th></tr></thead>
+    <thead><tr><th>Lote</th><th>Variedad</th>${STAGES.map(s => `<th class="stg ${canEdit(s.k) && !esJefe() ? 'mine' : ''}"><span class="sn">${s.n}</span>${s.label}${canEdit(s.k) && !esJefe() ? '<div class="tu">tu paso</div>' : ''}</th>`).join('')}<th class="stg">Descarte</th><th>Estado</th></tr></thead>
     <tbody>${dias.map(d => vs.map((v, i) => celdaFila(d, v, i, vs.length)).join('')).join('')}</tbody>
   </table></div>
   <div class="leyenda small muted">Tocá un casillero de tu paso para cargarlo o corregirlo. <span class="pill ok">OK</span> dentro de lo esperado · <span class="pill warn">Atención</span> desvío mayor a ${cfg('umbral_desvio')}% o descarte mayor a ${cfg('umbral_descarte')}% · <span class="pill crit">Alto</span></div>`;
 };
 function celda(d, v, s, r, I) {
-  const val = r ? r[s.k] : null, ed = canEdit(s.k, r, d);
+  const val = r ? r[s.k] : null, ed = canEdit(s.k), fp = fechaPaso(r, s.k);
   let extra = '';
   if (s.k === 'producido' && I.desv !== null) extra = `<span class="pill ${desvNivel(I.desvPct)}">${signo(I.desv)}${I.desvPct !== null ? ' · ' + signo(I.desvPct) + '%' : ''}</span>`;
-  const tip = r && r[s.k + '_por'] ? `${esc(r[s.k + '_por'])} · ${new Date(r[s.k + '_at']).toLocaleString('es-UY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : '';
-  const inner = isNum(val) ? `<b class="cv">${val}</b>${extra}` : ed ? `<span class="cargar">+ Cargar</span>` : `<span class="muted">—</span>`;
-  return `<${ed ? 'button' : 'div'} class="cbtn ${ed ? 'ed' : ''} ${isNum(val) ? 'lleno' : ''}" ${ed ? `onclick="editar('${d}','${v.id}','${s.k}')"` : ''} title="${tip}">${inner}</${ed ? 'button' : 'div'}>`;
+  const tip = r && r[s.k + '_por'] ? `Cargado por ${esc(r[s.k + '_por'])}` : '';
+  // pendiente = el paso anterior ya está y este no (lo que le toca hacer al encargado)
+  const prev = STAGES[s.n - 2], pendiente = !isNum(val) && (!prev || (r && isNum(r[prev.k])));
+  const inner = isNum(val) ? `<b class="cv">${val}</b>${fp ? `<span class="fp">${fmtDL(fp)}</span>` : ''}${extra}` : ed ? `<span class="cargar">+ Cargar</span>` : `<span class="muted">—</span>`;
+  return `<${ed ? 'button' : 'div'} class="cbtn ${ed ? 'ed' : 'lock'} ${isNum(val) ? 'lleno' : ''} ${ed && pendiente ? 'pend' : ''}" ${ed ? `onclick="editar('${d}','${v.id}','${s.k}')"` : ''} title="${tip}">${inner}</${ed ? 'button' : 'div'}>`;
 }
 function estadoHTML(I) {
   return { vacio: `<span class="muted small">—</span>`, pedido: `<span class="pill info">En producción</span>`, enfriando: `<span class="pill ${I.nivel}">Enfriando · ${I.espera <= 0 ? 'hoy' : I.espera + (I.espera === 1 ? ' día' : ' días')}</span>`, cerrado: `<span class="pill dark">Cerrado${I.espera !== null ? ' · ' + I.espera + 'd' : ''}</span>` }[I.estado];
@@ -455,7 +461,7 @@ function celdaFila(d, v, i, n) {
   return `<tr class="${i === n - 1 ? 'last' : ''} ${hoy ? 'hoy' : ''}">
     ${i === 0 ? `<td rowspan="${n}" class="lotecell"><div class="ln">L${dow(d)}</div><div class="small">${DIAS[dow(d)]}</div><div class="small muted">${fmtD(d)}${hoy ? ' · <b style="color:var(--accent)">hoy</b>' : ''}</div></td>` : ''}
     <td><span class="vname">${vDot(v.id)} ${esc(vCorto(v.id))}</span></td>
-    ${STAGES.map(s => `<td class="stg">${celda(d, v, s, r, I)}</td>`).join('')}
+    ${STAGES.map(s => `<td class="stg ${canEdit(s.k) && !esJefe() ? 'mine' : ''}">${celda(d, v, s, r, I)}</td>`).join('')}
     <td class="stg">${descHTML(I)}</td>
     <td>${estadoHTML(I)}</td></tr>`;
 }
@@ -466,7 +472,18 @@ function mLote(d, vs) {
       <div class="ml-steps">${STAGES.map(s => `<div><div class="ml-l"><span class="sn">${s.n}</span>${s.k === 'cortado' ? 'Cortado' : s.label}</div>${celda(d, v, s, r, I)}</div>`).join('')}<div><div class="ml-l">Descarte</div><div class="cbtn">${descHTML(I)}</div></div></div></div>`; }).join('')}</div>`;
 }
 
-/* ---------- "Tu tarea": carga rápida según el rol ---------- */
+/* ---------- aviso según el rol ---------- */
+function aviso() {
+  if (!rol() || esJefe()) return '';
+  if (!rol().edita.length) return `<div class="alert info" style="margin-bottom:8px"><span>👁</span><div>Tu usuario es de <b>solo consulta</b>.</div></div>`;
+  const st = STAGES.find(s => rol().edita.includes(s.k)), prev = STAGES[st.n - 2];
+  const pend = S.flujo.filter(r => !isNum(r[st.k]) && (!prev || isNum(r[prev.k])));
+  return `<div class="card tarea"><div class="eyebrow"><span>${st.icon}</span>Tu paso · ${st.n} de 3</div><h3>${st.label}: <em>cuántos moldes ${st.verbo}</em></h3>
+    <div class="small muted">Tocá los casilleros de la columna <b>${st.n} · ${st.label}</b> para cargar o corregir. Se guarda con la fecha de hoy; si lo cargás tarde, podés cambiarla. Las demás columnas están bloqueadas.</div>
+    ${st.k !== 'pedido' ? `<div style="margin-top:12px">${pend.length ? `<span class="pill warn">${pend.length} pendiente(s)</span> <span class="small">${[...new Set(pend.sort((a, b) => a.fecha.localeCompare(b.fecha)).map(r => `<a href="#" onclick="UI.ws='${lunesDe(r.fecha)}';render();return false">L${r.lote} ${fmtD(r.fecha)}</a>`))].join(' · ')}</span>` : '<span class="pill ok">Nada pendiente</span>'}</div>` : ''}
+  </div>`;
+}
+/* (carga rápida anterior, sin uso) */
 function tarea() {
   const me = ME(), r = rol(), t = today(), vs = vAct();
   if (!r.edita.length || esJefe()) return '';
@@ -485,13 +502,13 @@ function tarea() {
   const ws = lunesDe(f), dias = [0, 1, 2, 3, 4, 5].map(i => addDays(ws, i));
   return `<div class="card tarea"><div class="eyebrow"><span>${st.icon}</span>Tu paso · ${st.n} de 3</div><h3>¿Cuántos moldes ${st.verbo}?</h3>
     <div class="chips daychips">${dias.map(d => `<button class="${d === f ? 'on' : ''}" onclick="UI.tf='${d}';render()"><b>L${dow(d)}</b> ${DIAS3[dow(d)]} ${fmtD(d)}</button>`).join('')}<button onclick="UI.tf='${addDays(ws, 7)}';render()">→</button></div>
-    <div class="tl-rows">${vs.map(v => { const x = fila(f, v.id), ok = canEdit(st.k, x, f); return `<div class="vrow"><div><div class="vname">${vDot(v.id)} ${esc(vCorto(v.id))}</div><div class="vmeta">${st.k === 'producido' ? `Pedido: <b>${x && isNum(x.pedido) ? x.pedido : 'sin pedido'}</b>` : (x && isNum(x.pedido) ? 'Ya cargado: podés corregirlo' : 'Lote ' + dow(f) + ' · ' + DIAS[dow(f)])}${!ok && x ? ' · <span class="pill">ya pasó al paso siguiente</span>' : ''}</div></div>${ok ? stepper('t_' + v.id, x ? x[st.k] : '') : `<b class="cv">${x ? x[st.k] ?? '—' : '—'}</b>`}</div>`; }).join('')}</div>
+    <div class="tl-rows">${vs.map(v => { const x = fila(f, v.id), ok = canEdit(st.k); return `<div class="vrow"><div><div class="vname">${vDot(v.id)} ${esc(vCorto(v.id))}</div><div class="vmeta">${st.k === 'producido' ? `Pedido: <b>${x && isNum(x.pedido) ? x.pedido : 'sin pedido'}</b>` : (x && isNum(x.pedido) ? 'Ya cargado: podés corregirlo' : 'Lote ' + dow(f) + ' · ' + DIAS[dow(f)])}${!ok && x ? ' · <span class="pill">ya pasó al paso siguiente</span>' : ''}</div></div>${ok ? stepper('t_' + v.id, x ? x[st.k] : '') : `<b class="cv">${x ? x[st.k] ?? '—' : '—'}</b>`}</div>`; }).join('')}</div>
     <button class="btn big" onclick="guardarTarea('${st.k}')">Guardar lote ${dow(f)} · ${DIAS[dow(f)].toLowerCase()} ${fmtD(f)}</button></div>`;
 }
 async function guardarTarea(k) {
   const f = UI.tf; let n = 0;
   await safe(async () => {
-    for (const v of vAct()) { const q = num('t_' + v.id), x = fila(f, v.id); if (q === null || !canEdit(k, x, f)) continue; if (x && x[k] === q) continue; await guardarValor(f, v.id, k, q); n++; }
+    for (const v of vAct()) { const q = num('t_' + v.id), x = fila(f, v.id); if (q === null || !canEdit(k)) continue; if (x && x[k] === q) continue; await guardarValor(f, v.id, k, q); n++; }
     toast(n ? `✅ Lote ${dow(f)} guardado` : 'No había cambios'); render();
   });
 }
@@ -505,19 +522,23 @@ async function guardarCorte(f) {
 
 /* ---------- edición de un casillero ---------- */
 function editar(d, vid, k) {
-  const r = fila(d, vid), s = STAGES.find(x => x.k === k), prev = STAGES[s.n - 2];
+  if (!canEdit(k)) return toast('Ese paso no te corresponde', true);
+  const r = fila(d, vid), s = STAGES.find(x => x.k === k), prev = STAGES[s.n - 2], fp = fechaPaso(r, k);
   modal(`<div class="eyebrow"><span>${s.n}</span>${s.label}</div><h3>Lote ${dow(d)} · <em>${DIAS[dow(d)].toLowerCase()} ${fmtD(d)}</em></h3>
     <div class="vname" style="margin:6px 0 4px">${vDot(vid)} ${esc(vById(vid).nombre)}</div>
-    ${prev ? `<div class="small muted">${prev.label}: <b>${r && isNum(r[prev.k]) ? r[prev.k] : 'sin cargar'}</b></div>` : ''}
+    ${prev ? `<div class="small muted">${prev.label}: <b>${r && isNum(r[prev.k]) ? r[prev.k] : 'todavía sin cargar'}</b></div>` : ''}
     <label class="f">¿Cuántos moldes ${s.verbo}?</label>${stepper('e_q', r ? r[k] : '')}
-    ${r && r[k + '_por'] ? `<div class="small muted" style="margin-top:8px">Último cambio: ${esc(r[k + '_por'])}, ${new Date(r[k + '_at']).toLocaleString('es-UY')}</div>` : ''}
-    <div class="row" style="margin-top:20px"><button class="btn" style="flex:1" onclick="guardarEdicion('${d}','${vid}','${k}')">Guardar</button>${esJefe() && r && isNum(r[k]) ? `<button class="btn sec" onclick="guardarEdicion('${d}','${vid}','${k}',true)">Vaciar</button>` : ''}<button class="btn ghost" onclick="closeModal()">Cancelar</button></div>`);
+    <label class="f">Fecha en que se hizo</label><input type="date" id="e_f" value="${fp || today()}" max="${today()}" ${k !== 'pedido' ? `min="${d}"` : ''} style="max-width:220px">
+    <div class="small muted" style="margin-top:4px">Por defecto hoy. Cambiala si estás cargando un dato atrasado.</div>
+    ${r && r[k + '_por'] ? `<div class="small muted" style="margin-top:8px">Cargado por <b>${esc(r[k + '_por'])}</b></div>` : ''}
+    <div class="row" style="margin-top:20px"><button class="btn" style="flex:1" onclick="guardarEdicion('${d}','${vid}','${k}')">Guardar</button>${r && isNum(r[k]) ? `<button class="btn sec" onclick="guardarEdicion('${d}','${vid}','${k}',true)">Borrar dato</button>` : ''}<button class="btn ghost" onclick="closeModal()">Cancelar</button></div>`);
   setTimeout(() => $('#e_q')?.focus(), 50);
 }
 async function guardarEdicion(d, vid, k, vaciar) {
-  const q = vaciar ? null : num('e_q');
+  if (!canEdit(k)) return toast('Ese paso no te corresponde', true);
+  const q = vaciar ? null : num('e_q'), f = $('#e_f')?.value || today();
   if (!vaciar && q === null) return toast('Ingresá una cantidad', true);
-  await safe(async () => { await guardarValor(d, vid, k, q); closeModal(); toast('✅ Guardado'); render(); });
+  await safe(async () => { await guardarValor(d, vid, k, q, f); closeModal(); toast(vaciar ? 'Dato borrado' : '✅ Guardado'); render(); });
 }
 
 /* =====================================================================
@@ -574,7 +595,7 @@ AFTER.informes = () => {
 function exportar() {
   if (!window.XLSX) return toast('No se pudo cargar el exportador', true);
   const F = UI.F, R = informe(F), wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(R.rows.map(r => { const I = info(r); return { 'Fecha lote': r.fecha, Día: DIAS[dow(r.fecha)], Lote: 'L' + r.lote, Variedad: vById(r.variedad_id).nombre, Pedido: r.pedido ?? '', Producido: r.producido ?? '', 'Desvío producción': I.desv ?? '', 'Desvío %': I.desvPct ?? '', Cortado: r.cortado ?? '', 'Fecha corte': r.fecha_corte || '', Descarte: I.desc ?? '', 'Descarte %': I.descPct ?? '', 'Días de espera': I.espera ?? '', 'Pedido por': r.pedido_por || '', 'Producido por': r.producido_por || '', 'Cortado por': r.cortado_por || '' }; })), 'Lotes');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(R.rows.map(r => { const I = info(r); return { 'Fecha lote': r.fecha, Día: DIAS[dow(r.fecha)], Lote: 'L' + r.lote, Variedad: vById(r.variedad_id).nombre, Pedido: r.pedido ?? '', Producido: r.producido ?? '', 'Desvío producción': I.desv ?? '', 'Desvío %': I.desvPct ?? '', Cortado: r.cortado ?? '', 'Fecha corte': r.fecha_corte || '', Descarte: I.desc ?? '', 'Descarte %': I.descPct ?? '', 'Días de espera': I.espera ?? '', 'Fecha pedido': fechaPaso(r, 'pedido') || '', 'Fecha producción': fechaPaso(r, 'producido') || '', 'Pedido por': r.pedido_por || '', 'Producido por': r.producido_por || '', 'Cortado por': r.cortado_por || '' }; })), 'Lotes');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(R.porVar.map(x => ({ Variedad: vById(x.id).nombre, Pedido: x.ped, Producido: x.prod, 'Cumplimiento %': x.ped ? pct(x.prod, x.ped) : '', Cortado: x.cort, Descarte: x.desc, 'Descarte %': x.prodC ? pct(x.desc, x.prodC) : '' }))), 'Por variedad');
   XLSX.writeFile(wb, `pan-molde_${F.desde}_a_${F.hasta}.xlsx`);
 }
@@ -626,7 +647,7 @@ V.usuarios = () => {
   <h2>Qué hace cada rol</h2>
   <div class="card tw"><table><thead><tr><th>Rol</th><th>Alcance</th>${STAGES.map(s => `<th style="text-align:center">${s.n} · ${s.label}</th>`).join('')}<th style="text-align:center">Informes</th></tr></thead><tbody>
   ${orden.map(k => { const r = ROLES[k]; return `<tr><td><span class="rolechip" style="background:${r.color}22;color:${r.color === '#CDA85E' ? '#8A6516' : r.color}">${r.label}</span></td><td class="small muted" style="min-width:220px">${r.desc}</td>${STAGES.map(s => `<td style="text-align:center">${r.edita.includes(s.k) ? '✏️' : '👁'}</td>`).join('')}<td style="text-align:center">${r.views.includes('informes') ? '✓' : '—'}</td></tr>`; }).join('')}
-  </tbody></table><div class="small muted" style="margin-top:10px">✏️ carga y corrige · 👁 solo ve. Un encargado puede corregir su paso mientras el siguiente no esté cargado; después solo Administración o Supervisión.</div></div>`;
+  </tbody></table><div class="small muted" style="margin-top:10px">✏️ carga y corrige · 👁 solo ve. Cada encargado puede cargar y corregir su columna en cualquier lote; las demás las ve bloqueadas.</div></div>`;
 };
 const activeAdmins = () => S.personas.filter(p => p.activo && p.rol === 'admin');
 async function crearUsuario() {
