@@ -216,6 +216,18 @@ table.flujo td.mine{background:rgba(233,116,58,.07)}
 .cbtn.ed.pend{border:2px solid var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(233,116,58,.15)}
 .cbtn.ed.pend .cargar::before{content:'● ';font-size:10px}
 .tarea h3 em{font-family:var(--font-accent);font-style:italic;font-weight:500;color:var(--accent)}
+.lotebtn{margin-top:10px;padding:8px 12px;font-size:12.5px;min-height:36px;white-space:nowrap}
+.mlote .ml-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.mlote .ml-h .lotebtn{margin:0 0 0 auto}
+.mlist{margin:14px 0 4px}
+.mrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.mrow:last-child{border-bottom:0}.mrow.corte{align-items:flex-start}
+.qbig{width:120px !important;text-align:center;font-family:var(--font-title);font-size:24px !important;font-weight:700;min-height:56px !important}
+.clist{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.cchip{font-size:13px;background:var(--soft);border-radius:var(--r-pill);padding:4px 10px}
+.cchip a{color:var(--crit);text-decoration:none;font-weight:700;margin-left:2px}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--accent)}
+.qbig{-moz-appearance:textfield}.qbig::-webkit-inner-spin-button,.qbig::-webkit-outer-spin-button{-webkit-appearance:none}
 </style>
 </head>
 <body>
@@ -258,7 +270,7 @@ const localDay = ts => { const d = new Date(ts); d.setMinutes(d.getMinutes() - d
 const COLORS = ['#E9743A', '#1F3A6B', '#7D8340', '#CDA85E', '#5FA3CF', '#C8473B', '#8B5E9A', '#5B6478'];
 const isNum = v => v !== null && v !== undefined && v !== '';
 
-let S = { variedades: [], personas: [], config: {}, flujo: [] };
+let S = { variedades: [], personas: [], config: {}, flujo: [], cortes: [] };
 let VIEW = 'flujo', UI = {}, CHARTS = [];
 function toast(msg, err) { const t = $('#toast'); t.textContent = msg; t.className = 'show' + (err ? ' err' : ''); clearTimeout(t._h); t._h = setTimeout(() => t.className = '', err ? 4200 : 2400); }
 function cfg(k) { const d = { dias_alerta: 2, umbral_desvio: 10, umbral_descarte: 5 }; const v = S.config[k]; return v === undefined || v === null || v === '' ? d[k] : Number(v); }
@@ -303,17 +315,18 @@ function H(n, eb, t, acc) { return `<div class="eyebrow"><span>${String(n).padSt
 /* ---------- datos ---------- */
 const LIVE = !!SUPABASE_KEY && !SUPABASE_KEY.startsWith('__');
 let sb = null;
-const TABLES = { variedades: 'pm_variedades', personas: 'pm_personas', flujo: 'pm_flujo' };
+const TABLES = { variedades: 'pm_variedades', personas: 'pm_personas', flujo: 'pm_flujo', cortes: 'pm_cortes' };
 const DB = {
   async load() {
     if (LIVE) {
       const desde = addDays(today(), -400);
       const all = async (t, q) => { let out = [], from = 0; for (;;) { const r = await q(sb.from(t).select('*')).range(from, from + 999); if (r.error) throw r.error; out = out.concat(r.data); if (r.data.length < 1000) break; from += 1000; } return out; };
-      const [v, p, c, f] = await Promise.all([all('pm_variedades', q => q.order('orden')), all('pm_personas', q => q.order('nombre')), all('pm_config', q => q), all('pm_flujo', q => q.gte('fecha', desde).order('fecha'))]);
-      S = { variedades: v, personas: p, config: Object.fromEntries(c.map(x => [x.clave, x.valor])), flujo: f };
+      const [v, p, c, f, k] = await Promise.all([all('pm_variedades', q => q.order('orden')), all('pm_personas', q => q.order('nombre')), all('pm_config', q => q), all('pm_flujo', q => q.gte('fecha', desde).order('fecha')), all('pm_cortes', q => q.gte('fecha', desde).order('created_at'))]);
+      S = { variedades: v, personas: p, config: Object.fromEntries(c.map(x => [x.clave, x.valor])), flujo: f, cortes: k };
     } else {
       const raw = localStorage.getItem('pm3_demo');
       S = raw ? JSON.parse(raw) : demoBase();
+      S.cortes = S.cortes || [];
       for (const p of S.personas) if (p.pin_demo && !p.pin_hash) { p.pin_hash = await hashPin(p.id, p.pin_demo); delete p.pin_demo; }
       demoSave();
     }
@@ -329,6 +342,10 @@ const DB = {
     if (LIVE) { const r = await sb.from(TABLES[k]).update(patch).eq('id', id).select().single(); if (r.error) throw r.error; const i = S[k].findIndex(x => x.id === id); if (i >= 0) S[k][i] = r.data; return r.data; }
     const o = S[k].find(x => x.id === id); Object.assign(o, patch); demoSave(); return o;
   },
+  async del(k, id) {
+    if (LIVE) { const r = await sb.from(TABLES[k]).delete().eq('id', id); if (r.error) throw r.error; }
+    S[k] = S[k].filter(x => x.id !== id); if (!LIVE) demoSave();
+  },
   async setCfg(clave, valor) { if (LIVE) { const r = await sb.from('pm_config').upsert({ clave, valor }); if (r.error) throw r.error; } S.config[clave] = valor; if (!LIVE) demoSave(); }
 };
 function demoSave() { if (!LIVE) localStorage.setItem('pm3_demo', JSON.stringify(S)); }
@@ -336,7 +353,7 @@ function demoBase() {
   return {
     variedades: [{ id: uid(), nombre: 'Pan de sándwich blanco', activo: true, orden: 1 }, { id: uid(), nombre: 'Pan de sándwich integral', activo: true, orden: 2 }],
     personas: [['Gabi', 'admin'], ['Encargado 1', 'despacho'], ['Encargado 2', 'produccion'], ['Encargado 3', 'sandwicheria'], ['Contadora', 'consulta']].map(([n, r]) => ({ id: uid(), nombre: n, rol: r, activo: true, pin_demo: '1234' })),
-    config: { dias_alerta: 2, umbral_desvio: 10, umbral_descarte: 5 }, flujo: []
+    config: { dias_alerta: 2, umbral_desvio: 10, umbral_descarte: 5 }, flujo: [], cortes: []
   };
 }
 async function safe(fn) {
@@ -349,13 +366,16 @@ async function safe(fn) {
 
 /* ---------- lógica del flujo ---------- */
 const fila = (fecha, vid) => S.flujo.find(r => r.fecha === fecha && r.variedad_id === vid);
+// Un lote está CERRADO cuando sandwichería marcó "terminado" (fecha_corte). Antes, si hay cortes, está "cortando".
+const cerrado = r => !!r && !!r.fecha_corte && isNum(r.cortado);
+const cortesDe = r => !r ? [] : S.cortes.filter(c => c.flujo_id === r.id).sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.created_at || '').localeCompare(b.created_at || ''));
 function info(r) {
   const o = { estado: 'vacio', nivel: '', espera: null, desv: null, desvPct: null, desc: null, descPct: null };
   if (!r) return o;
   if (isNum(r.pedido) && isNum(r.producido)) { o.desv = r.producido - r.pedido; o.desvPct = r.pedido ? pct(o.desv, r.pedido) : null; }
-  if (isNum(r.producido) && isNum(r.cortado)) { o.desc = r.producido - r.cortado; o.descPct = r.producido ? pct(o.desc, r.producido) : null; }
-  if (isNum(r.cortado)) { o.estado = 'cerrado'; o.espera = r.fecha_corte ? diffDays(r.fecha_corte, r.fecha) : null; }
-  else if (isNum(r.producido)) { o.estado = 'enfriando'; o.espera = diffDays(today(), r.fecha); o.nivel = o.espera >= cfg('dias_alerta') + 1 ? 'crit' : o.espera >= cfg('dias_alerta') ? 'warn' : 'ok'; }
+  if (cerrado(r) && isNum(r.producido)) { o.desc = r.producido - r.cortado; o.descPct = r.producido ? pct(o.desc, r.producido) : null; }
+  if (cerrado(r)) { o.estado = 'cerrado'; o.espera = diffDays(r.fecha_corte, r.fecha); }
+  else if (isNum(r.producido) || isNum(r.cortado)) { o.estado = isNum(r.cortado) ? 'cortando' : 'enfriando'; o.espera = diffDays(today(), r.fecha); o.nivel = o.espera >= cfg('dias_alerta') + 1 ? 'crit' : o.espera >= cfg('dias_alerta') ? 'warn' : 'ok'; }
   else if (isNum(r.pedido)) o.estado = 'pedido';
   return o;
 }
@@ -415,11 +435,11 @@ V.flujo = () => {
   const vs = vAct();
   const semana = S.flujo.filter(r => r.fecha >= ws && r.fecha <= addDays(ws, 5));
   const tot = k => semana.reduce((s, r) => s + (isNum(r[k]) ? r[k] : 0), 0);
-  const conPed = semana.filter(r => isNum(r.pedido) && isNum(r.producido)), cerr = semana.filter(r => isNum(r.cortado));
+  const conPed = semana.filter(r => isNum(r.pedido) && isNum(r.producido)), cerr = semana.filter(cerrado);
   const cump = pct(conPed.reduce((s, r) => s + r.producido, 0), conPed.reduce((s, r) => s + r.pedido, 0));
   const descM = cerr.reduce((s, r) => s + (r.producido - r.cortado), 0), descP = pct(descM, cerr.reduce((s, r) => s + r.producido, 0));
-  const pend = S.flujo.filter(r => isNum(r.producido) && !isNum(r.cortado));
-  const pendM = pend.reduce((s, r) => s + r.producido, 0), viejos = pend.filter(r => info(r).nivel !== 'ok');
+  const pend = S.flujo.filter(r => isNum(r.producido) && !cerrado(r));
+  const pendM = pend.reduce((s, r) => s + Math.max(0, r.producido - (r.cortado || 0)), 0), viejos = pend.filter(r => info(r).nivel !== 'ok');
   const viejosAnt = pend.filter(r => r.fecha < ws);
   return `${H(1, 'Flujo de lotes', 'Cada lote,', 'paso a paso')}
   <div class="sub">Pedido → producido → cortado y envasado. Cada encargado completa su paso y los desvíos se calculan solos.</div>
@@ -440,26 +460,28 @@ V.flujo = () => {
     <thead><tr><th>Lote</th><th>Variedad</th>${STAGES.map(s => `<th class="stg ${canEdit(s.k) && !esJefe() ? 'mine' : ''}"><span class="sn">${s.n}</span>${s.label}${canEdit(s.k) && !esJefe() ? '<div class="tu">tu paso</div>' : ''}</th>`).join('')}<th class="stg">Descarte</th><th>Estado</th></tr></thead>
     <tbody>${dias.map(d => vs.map((v, i) => celdaFila(d, v, i, vs.length)).join('')).join('')}</tbody>
   </table></div>
-  <div class="leyenda small muted">Tocá un casillero de tu paso para cargarlo o corregirlo. <span class="pill ok">OK</span> dentro de lo esperado · <span class="pill warn">Atención</span> desvío mayor a ${cfg('umbral_desvio')}% o descarte mayor a ${cfg('umbral_descarte')}% · <span class="pill crit">Alto</span></div>`;
+  <div class="leyenda small muted">Tocá el botón del lote o un casillero de tu paso para cargar. <span class="pill ok">OK</span> dentro de lo esperado · <span class="pill warn">Atención</span> desvío mayor a ${cfg('umbral_desvio')}% o descarte mayor a ${cfg('umbral_descarte')}% · <span class="pill crit">Alto</span></div>`;
 };
 function celda(d, v, s, r, I) {
   const val = r ? r[s.k] : null, ed = canEdit(s.k), fp = fechaPaso(r, s.k);
   let extra = '';
   if (s.k === 'producido' && I.desv !== null) extra = `<span class="pill ${desvNivel(I.desvPct)}">${signo(I.desv)}${I.desvPct !== null ? ' · ' + signo(I.desvPct) + '%' : ''}</span>`;
+  if (s.k === 'cortado' && isNum(val) && !cerrado(r)) extra = `<span class="pill info">en curso${isNum(r.producido) ? ' · faltan ' + Math.max(0, r.producido - val) : ''}</span>`;
+  if (s.k === 'cortado' && cortesDe(r).length > 1) extra += `<span class="fp">${cortesDe(r).length} cargas</span>`;
   const tip = r && r[s.k + '_por'] ? `Cargado por ${esc(r[s.k + '_por'])}` : '';
-  // pendiente = el paso anterior ya está y este no (lo que le toca hacer al encargado)
-  const prev = STAGES[s.n - 2], pendiente = !isNum(val) && (!prev || (r && isNum(r[prev.k])));
+  const prev = STAGES[s.n - 2];
+  const pendiente = s.k === 'cortado' ? (r && isNum(r.producido) && !cerrado(r)) : (!isNum(val) && (!prev || (r && isNum(r[prev.k]))));
   const inner = isNum(val) ? `<b class="cv">${val}</b>${fp ? `<span class="fp">${fmtDL(fp)}</span>` : ''}${extra}` : ed ? `<span class="cargar">+ Cargar</span>` : `<span class="muted">—</span>`;
   return `<${ed ? 'button' : 'div'} class="cbtn ${ed ? 'ed' : 'lock'} ${isNum(val) ? 'lleno' : ''} ${ed && pendiente ? 'pend' : ''}" ${ed ? `onclick="editar('${d}','${v.id}','${s.k}')"` : ''} title="${tip}">${inner}</${ed ? 'button' : 'div'}>`;
 }
 function estadoHTML(I) {
-  return { vacio: `<span class="muted small">—</span>`, pedido: `<span class="pill info">En producción</span>`, enfriando: `<span class="pill ${I.nivel}">Enfriando · ${I.espera <= 0 ? 'hoy' : I.espera + (I.espera === 1 ? ' día' : ' días')}</span>`, cerrado: `<span class="pill dark">Cerrado${I.espera !== null ? ' · ' + I.espera + 'd' : ''}</span>` }[I.estado];
+  return { vacio: `<span class="muted small">—</span>`, pedido: `<span class="pill info">En producción</span>`, enfriando: `<span class="pill ${I.nivel}">Enfriando · ${I.espera <= 0 ? 'hoy' : I.espera + (I.espera === 1 ? ' día' : ' días')}</span>`, cortando: `<span class="pill ${I.nivel || 'info'}">Cortando · ${I.espera <= 0 ? 'hoy' : I.espera + (I.espera === 1 ? ' día' : ' días')}</span>`, cerrado: `<span class="pill dark">Cerrado${I.espera !== null ? ' · ' + I.espera + 'd' : ''}</span>` }[I.estado];
 }
 const descHTML = I => I.desc !== null ? `<b class="cv">${I.desc}</b><span class="pill ${descNivel(I.descPct)}">${nf(I.descPct)}%</span>` : '<span class="muted">—</span>';
 function celdaFila(d, v, i, n) {
   const r = fila(d, v.id), I = info(r), hoy = d === today();
   return `<tr class="${i === n - 1 ? 'last' : ''} ${hoy ? 'hoy' : ''}">
-    ${i === 0 ? `<td rowspan="${n}" class="lotecell"><div class="ln">L${dow(d)}</div><div class="small">${DIAS[dow(d)]}</div><div class="small muted">${fmtD(d)}${hoy ? ' · <b style="color:var(--accent)">hoy</b>' : ''}</div></td>` : ''}
+    ${i === 0 ? `<td rowspan="${n}" class="lotecell"><div class="ln">L${dow(d)}</div><div class="small">${DIAS[dow(d)]}</div><div class="small muted">${fmtD(d)}${hoy ? ' · <b style="color:var(--accent)">hoy</b>' : ''}</div>${btnLote(d)}</td>` : ''}
     <td><span class="vname">${vDot(v.id)} ${esc(vCorto(v.id))}</span></td>
     ${STAGES.map(s => `<td class="stg ${canEdit(s.k) && !esJefe() ? 'mine' : ''}">${celda(d, v, s, r, I)}</td>`).join('')}
     <td class="stg">${descHTML(I)}</td>
@@ -467,19 +489,26 @@ function celdaFila(d, v, i, n) {
 }
 function mLote(d, vs) {
   const hoy = d === today();
-  return `<div class="card mlote ${hoy ? 'hoy' : ''}"><div class="ml-h"><span class="ln">L${dow(d)}</span> ${DIAS[dow(d)]} <span class="muted">${fmtD(d)}</span>${hoy ? ' <span class="pill" style="background:var(--accent);color:#fff">hoy</span>' : ''}</div>
+  return `<div class="card mlote ${hoy ? 'hoy' : ''}"><div class="ml-h"><span class="ln">L${dow(d)}</span> ${DIAS[dow(d)]} <span class="muted">${fmtD(d)}</span>${hoy ? ' <span class="pill" style="background:var(--accent);color:#fff">hoy</span>' : ''}${btnLote(d)}</div>
     ${vs.map(v => { const r = fila(d, v.id), I = info(r); return `<div class="ml-v"><div class="row" style="justify-content:space-between"><span class="vname">${vDot(v.id)} ${esc(vCorto(v.id))}</span>${estadoHTML(I)}</div>
       <div class="ml-steps">${STAGES.map(s => `<div><div class="ml-l"><span class="sn">${s.n}</span>${s.k === 'cortado' ? 'Cortado' : s.label}</div>${celda(d, v, s, r, I)}</div>`).join('')}<div><div class="ml-l">Descarte</div><div class="cbtn">${descHTML(I)}</div></div></div></div>`; }).join('')}</div>`;
 }
 
+/* ---------- botón "cargar lote" según el rol ---------- */
+function btnLote(d) {
+  if (!rol() || esJefe() || !rol().edita.length) return '';
+  const st = STAGES.find(x => rol().edita.includes(x.k));
+  const txt = { pedido: 'Cargar pedido', producido: 'Cargar producción', cortado: 'Cargar corte' }[st.k];
+  return `<button class="btn sm lotebtn" onclick="editar('${d}',null,'${st.k}')">${st.icon} ${txt}</button>`;
+}
 /* ---------- aviso según el rol ---------- */
 function aviso() {
   if (!rol() || esJefe()) return '';
   if (!rol().edita.length) return `<div class="alert info" style="margin-bottom:8px"><span>👁</span><div>Tu usuario es de <b>solo consulta</b>.</div></div>`;
   const st = STAGES.find(s => rol().edita.includes(s.k)), prev = STAGES[st.n - 2];
-  const pend = S.flujo.filter(r => !isNum(r[st.k]) && (!prev || isNum(r[prev.k])));
+  const pend = st.k === 'cortado' ? S.flujo.filter(r => isNum(r.producido) && !cerrado(r)) : S.flujo.filter(r => !isNum(r[st.k]) && (!prev || isNum(r[prev.k])));
   return `<div class="card tarea"><div class="eyebrow"><span>${st.icon}</span>Tu paso · ${st.n} de 3</div><h3>${st.label}: <em>cuántos moldes ${st.verbo}</em></h3>
-    <div class="small muted">Tocá los casilleros de la columna <b>${st.n} · ${st.label}</b> para cargar o corregir. Se guarda con la fecha de hoy; si lo cargás tarde, podés cambiarla. Las demás columnas están bloqueadas.</div>
+    <div class="small muted">${st.k === 'cortado' ? 'Tocá <b>Cargar corte</b> en el lote. Podés hacer varias cargas por día o en días distintos; cuando terminás el lote, marcalo como <b>terminado</b> y lo que falte se cuenta como descarte.' : `Tocá <b>${st.k === 'pedido' ? 'Cargar pedido' : 'Cargar producción'}</b> en el lote y escribí las cantidades: con <b>Enter</b> pasás a la siguiente variedad y en la última se guarda.`} Las demás columnas están bloqueadas.</div>
     ${st.k !== 'pedido' ? `<div style="margin-top:12px">${pend.length ? `<span class="pill warn">${pend.length} pendiente(s)</span> <span class="small">${[...new Set(pend.sort((a, b) => a.fecha.localeCompare(b.fecha)).map(r => `<a href="#" onclick="UI.ws='${lunesDe(r.fecha)}';render();return false">L${r.lote} ${fmtD(r.fecha)}</a>`))].join(' · ')}</span>` : '<span class="pill ok">Nada pendiente</span>'}</div>` : ''}
   </div>`;
 }
@@ -520,25 +549,109 @@ async function guardarCorte(f) {
   });
 }
 
-/* ---------- edición de un casillero ---------- */
+/* ---------- carga por lote ---------- */
 function editar(d, vid, k) {
   if (!canEdit(k)) return toast('Ese paso no te corresponde', true);
-  const r = fila(d, vid), s = STAGES.find(x => x.k === k), prev = STAGES[s.n - 2], fp = fechaPaso(r, k);
-  modal(`<div class="eyebrow"><span>${s.n}</span>${s.label}</div><h3>Lote ${dow(d)} · <em>${DIAS[dow(d)].toLowerCase()} ${fmtD(d)}</em></h3>
-    <div class="vname" style="margin:6px 0 4px">${vDot(vid)} ${esc(vById(vid).nombre)}</div>
-    ${prev ? `<div class="small muted">${prev.label}: <b>${r && isNum(r[prev.k]) ? r[prev.k] : 'todavía sin cargar'}</b></div>` : ''}
-    <label class="f">¿Cuántos moldes ${s.verbo}?</label>${stepper('e_q', r ? r[k] : '')}
-    <label class="f">Fecha en que se hizo</label><input type="date" id="e_f" value="${fp || today()}" max="${today()}" ${k !== 'pedido' ? `min="${d}"` : ''} style="max-width:220px">
-    <div class="small muted" style="margin-top:4px">Por defecto hoy. Cambiala si estás cargando un dato atrasado.</div>
-    ${r && r[k + '_por'] ? `<div class="small muted" style="margin-top:8px">Cargado por <b>${esc(r[k + '_por'])}</b></div>` : ''}
-    <div class="row" style="margin-top:20px"><button class="btn" style="flex:1" onclick="guardarEdicion('${d}','${vid}','${k}')">Guardar</button>${r && isNum(r[k]) ? `<button class="btn sec" onclick="guardarEdicion('${d}','${vid}','${k}',true)">Borrar dato</button>` : ''}<button class="btn ghost" onclick="closeModal()">Cancelar</button></div>`);
-  setTimeout(() => $('#e_q')?.focus(), 50);
+  if (k === 'cortado') return editarCorte(d, vid);
+  return editarLote(d, k, vid);
 }
-async function guardarEdicion(d, vid, k, vaciar) {
+// Enter: pasa al siguiente casillero; en el último, guarda.
+function enterNav(e, saveFn) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const list = [...document.querySelectorAll('.modal .mq')], i = list.indexOf(e.target);
+  if (i >= 0 && i < list.length - 1) { list[i + 1].focus(); list[i + 1].select?.(); } else window[saveFn]();
+}
+function qInput(id, val) { return `<input type="number" inputmode="numeric" enterkeyhint="next" min="0" class="mq qbig" id="${id}" value="${val ?? ''}" placeholder="0" onkeydown="enterNav(event,'guardarModal')" onfocus="this.select()">`; }
+
+// Paso 1 y 2: todas las variedades del lote en una sola ventana
+function editarLote(d, k, focusVid) {
+  const s = STAGES.find(x => x.k === k), prev = STAGES[s.n - 2], vs = vAct();
+  const fps = vs.map(v => fechaPaso(fila(d, v.id), k)).filter(Boolean);
+  UI.modal = { tipo: 'lote', d, k };
+  modal(`<div class="eyebrow"><span>${s.n}</span>${s.label}</div><h3>Lote ${dow(d)} · <em>${DIAS[dow(d)].toLowerCase()} ${fmtD(d)}</em></h3>
+    <div class="small muted">¿Cuántos moldes ${s.verbo}? Escribí la cantidad y apretá <b>Enter</b> para pasar a la siguiente.</div>
+    <div class="mlist">${vs.map(v => { const r = fila(d, v.id); return `<div class="mrow"><div><div class="vname">${vDot(v.id)} ${esc(vCorto(v.id))}</div>${prev ? `<div class="small muted">${prev.label}: <b>${r && isNum(r[prev.k]) ? r[prev.k] : '—'}</b></div>` : ''}${r && r[k + '_por'] ? `<div class="small muted">Cargado por ${esc(r[k + '_por'])}</div>` : ''}</div>${qInput('mq_' + v.id, r ? r[k] : '')}</div>`; }).join('')}</div>
+    <label class="f">Fecha en que se hizo</label><input type="date" id="e_f" value="${fps[0] || today()}" max="${today()}" ${k !== 'pedido' ? `min="${d}"` : ''} style="max-width:220px">
+    <div class="small muted" style="margin-top:4px">Por defecto hoy. Cambiala si estás cargando un dato atrasado. Si borrás un número, se elimina ese dato.</div>
+    <div class="row" style="margin-top:20px"><button class="btn" style="flex:1" onclick="guardarModal()">Guardar lote ${dow(d)}</button><button class="btn ghost" onclick="closeModal()">Cancelar</button></div>`);
+  setTimeout(() => { const el = document.getElementById('mq_' + (focusVid || vs[0]?.id)); el?.focus(); el?.select(); }, 60);
+}
+function guardarModal() { const m = UI.modal; if (!m) return; return m.tipo === 'lote' ? guardarLote(m.d, m.k) : guardarCortes(m.d); }
+async function guardarLote(d, k) {
   if (!canEdit(k)) return toast('Ese paso no te corresponde', true);
-  const q = vaciar ? null : num('e_q'), f = $('#e_f')?.value || today();
-  if (!vaciar && q === null) return toast('Ingresá una cantidad', true);
-  await safe(async () => { await guardarValor(d, vid, k, q, f); closeModal(); toast(vaciar ? 'Dato borrado' : '✅ Guardado'); render(); });
+  const f = $('#e_f')?.value || today(); let n = 0;
+  await safe(async () => {
+    for (const v of vAct()) {
+      const el = document.getElementById('mq_' + v.id), r = fila(d, v.id), prevVal = r ? r[k] : null;
+      const q = el.value === '' ? null : parseInt(el.value);
+      if (q !== null && (isNaN(q) || q < 0)) throw new Error('Cantidad inválida en ' + vCorto(v.id));
+      if (q === null && !isNum(prevVal)) continue;
+      if (q === prevVal && fechaPaso(r, k) === f) continue;
+      await guardarValor(d, v.id, k, q, f); n++;
+    }
+    closeModal(); toast(n ? `✅ Lote ${dow(d)} guardado` : 'No había cambios'); render();
+  });
+}
+
+// Paso 3: varias cargas de corte por variedad + marcar el lote como terminado
+function editarCorte(d, focusVid) {
+  const vs = vAct(), puedeBorrar = c => esJefe() || c.por === user();
+  UI.modal = { tipo: 'corte', d };
+  modal(`<div class="eyebrow"><span>3</span>Cortado y envasado</div><h3>Lote ${dow(d)} · <em>${DIAS[dow(d)].toLowerCase()} ${fmtD(d)}</em></h3>
+    <div class="small muted">Agregá lo que se cortó. Podés cargar varias veces (hoy, mañana…). Con <b>Enter</b> pasás a la siguiente variedad.</div>
+    <div class="mlist">${vs.map(v => { const r = fila(d, v.id), cs = cortesDe(r), legacy = r && isNum(r.cortado) && !cs.length ? r.cortado : 0, tot = r && isNum(r.cortado) ? r.cortado : 0, prod = r && isNum(r.producido) ? r.producido : null;
+      return `<div class="mrow corte"><div style="flex:1">
+        <div class="vname">${vDot(v.id)} ${esc(vCorto(v.id))} ${cerrado(r) ? '<span class="pill dark">terminado</span>' : ''}</div>
+        <div class="small muted">Producido: <b>${prod ?? '—'}</b> · Cortado hasta ahora: <b>${tot}</b>${prod !== null ? ` · Faltan: <b>${Math.max(0, prod - tot)}</b>` : ''}</div>
+        ${cs.length || legacy ? `<div class="clist">${legacy ? `<span class="cchip">${fmtDL(r.fecha_corte || localDay(r.cortado_at))} · <b>${legacy}</b></span>` : ''}${cs.map(c => `<span class="cchip">${fmtDL(c.fecha)} · <b>${c.cantidad}</b> <span class="muted">${esc(c.por || '')}</span>${puedeBorrar(c) ? ` <a href="#" title="Borrar esta carga" onclick="borrarCorte('${c.id}');return false">✕</a>` : ''}</span>`).join('')}</div>` : ''}
+        <label class="chk"><input type="checkbox" id="mt_${v.id}" ${cerrado(r) ? 'checked' : ''}> Terminé de cortar este lote <span class="muted">(lo que falta cuenta como descarte)</span></label>
+      </div><div class="right"><div class="small muted" style="margin-bottom:4px">Agregar</div>${qInput('mq_' + v.id, '')}</div></div>`; }).join('')}</div>
+    <label class="f">Fecha del corte</label><input type="date" id="e_f" value="${today()}" max="${today()}" min="${d}" style="max-width:220px">
+    <div class="row" style="margin-top:20px"><button class="btn" style="flex:1" onclick="guardarModal()">Guardar</button><button class="btn ghost" onclick="closeModal()">Cancelar</button></div>`);
+  setTimeout(() => { const el = document.getElementById('mq_' + (focusVid || vs[0]?.id)); el?.focus(); }, 60);
+}
+// Recalcula el total cortado del lote a partir de las cargas
+async function syncCorte(r, terminado) {
+  const cs = cortesDe(r), sum = cs.reduce((a, c) => a + c.cantidad, 0), last = cs[cs.length - 1];
+  const patch = { cortado: cs.length ? sum : (terminado ? 0 : null), cortado_por: last ? last.por : (terminado ? user() : null), cortado_at: last ? (last.created_at || new Date().toISOString()) : (terminado ? new Date().toISOString() : null) };
+  patch.fecha_corte = terminado ? (cs.length ? cs.reduce((m, c) => c.fecha > m ? c.fecha : m, cs[0].fecha) : today()) : null;
+  return DB.upd('flujo', r.id, patch);
+}
+async function guardarCortes(d) {
+  if (!canEdit('cortado')) return toast('Ese paso no te corresponde', true);
+  const f = $('#e_f')?.value || today(), t = today(); let n = 0;
+  if (f > t) return toast('La fecha no puede ser futura', true);
+  if (f < d) return toast(`La fecha no puede ser anterior al día del lote (${fmtD(d)})`, true);
+  await safe(async () => {
+    // validar todo antes de guardar
+    const plan = vAct().map(v => { const el = document.getElementById('mq_' + v.id), q = el.value === '' ? 0 : parseInt(el.value), r = fila(d, v.id), term = document.getElementById('mt_' + v.id).checked; return { v, q, r, term }; });
+    for (const p of plan) {
+      if (isNaN(p.q) || p.q < 0) throw new Error('Cantidad inválida en ' + vCorto(p.v.id));
+      const tot = (p.r && isNum(p.r.cortado) ? p.r.cortado : 0) + p.q;
+      if (p.r && isNum(p.r.producido) && tot > p.r.producido) throw new Error(`${vCorto(p.v.id)}: el total cortado (${tot}) supera lo producido (${p.r.producido})`);
+    }
+    for (const p of plan) {
+      let r = p.r; const estabaTerm = cerrado(r);
+      if (!p.q && p.term === estabaTerm) continue;
+      if (!r) { if (!p.q && !p.term) continue; r = await DB.ins('flujo', { fecha: d, variedad_id: p.v.id, lote: dow(d) }); }
+      // cortes cargados antes de esta versión: se pasan a una carga para no perderlos
+      if (isNum(r.cortado) && r.cortado > 0 && !cortesDe(r).length) await DB.ins('cortes', { flujo_id: r.id, fecha: r.fecha_corte || localDay(r.cortado_at || new Date()), cantidad: r.cortado, por: r.cortado_por || null });
+      if (p.q) await DB.ins('cortes', { flujo_id: r.id, fecha: f, cantidad: p.q, por: user() });
+      // si se cortó todo lo producido, se marca terminado automáticamente
+      const tot = cortesDe(r).reduce((a, c) => a + c.cantidad, 0);
+      const term = p.term || (isNum(r.producido) && tot >= r.producido);
+      await syncCorte(fila(d, p.v.id), term); n++;
+    }
+    closeModal(); toast(n ? `✅ Corte del lote ${dow(d)} guardado` : 'No había cambios'); render();
+  });
+}
+async function borrarCorte(id) {
+  const c = S.cortes.find(x => x.id === id); if (!c) return;
+  if (!(esJefe() || c.por === user())) return toast('Solo podés borrar tus cargas', true);
+  if (!confirm(`¿Borrar la carga de ${c.cantidad} moldes del ${fmtD(c.fecha)}?`)) return;
+  const r = S.flujo.find(x => x.id === c.flujo_id), d = r.fecha;
+  await safe(async () => { await DB.del('cortes', id); await syncCorte(r, false); toast('Carga borrada · el lote queda abierto'); render(); editarCorte(d); });
 }
 
 /* =====================================================================
@@ -570,20 +683,20 @@ V.informes = () => {
   </tbody></table></div>
   <h2>Detalle por lote</h2>
   <div class="card tw"><table><thead><tr><th>Lote</th><th>Variedad</th><th class="n">Pedido</th><th class="n">Producido</th><th class="n">Desvío</th><th class="n">Cortado</th><th class="n">Descarte</th><th>Espera</th><th>Cargado por</th></tr></thead><tbody>
-  ${R.rows.slice().reverse().map(r => { const I = info(r); return `<tr><td><b>L${r.lote}</b> ${fmtDL(r.fecha)}</td><td>${vDot(r.variedad_id)} ${esc(vCorto(r.variedad_id))}</td><td class="n">${r.pedido ?? '—'}</td><td class="n">${r.producido ?? '—'}</td><td class="n">${I.desv !== null ? `<span class="pill ${desvNivel(I.desvPct)}">${signo(I.desv)}</span>` : '—'}</td><td class="n">${r.cortado ?? '—'}</td><td class="n">${I.desc !== null ? `<span class="pill ${descNivel(I.descPct)}">${I.desc} · ${nf(I.descPct)}%</span>` : '—'}</td><td class="small">${I.estado === 'cerrado' ? I.espera + ' d' : I.estado === 'enfriando' ? `<span class="pill ${I.nivel}">abierto ${I.espera} d</span>` : '—'}</td><td class="small muted">${esc([r.pedido_por, r.producido_por, r.cortado_por].filter(Boolean).join(' → '))}</td></tr>`; }).join('') || '<tr><td colspan="9" class="muted">Sin lotes en el período</td></tr>'}
+  ${R.rows.slice().reverse().map(r => { const I = info(r); return `<tr><td><b>L${r.lote}</b> ${fmtDL(r.fecha)}</td><td>${vDot(r.variedad_id)} ${esc(vCorto(r.variedad_id))}</td><td class="n">${r.pedido ?? '—'}</td><td class="n">${r.producido ?? '—'}</td><td class="n">${I.desv !== null ? `<span class="pill ${desvNivel(I.desvPct)}">${signo(I.desv)}</span>` : '—'}</td><td class="n">${r.cortado ?? '—'}</td><td class="n">${I.desc !== null ? `<span class="pill ${descNivel(I.descPct)}">${I.desc} · ${nf(I.descPct)}%</span>` : '—'}</td><td class="small">${I.estado === 'cerrado' ? I.espera + ' d' : ['enfriando', 'cortando'].includes(I.estado) ? `<span class="pill ${I.nivel}">abierto ${I.espera} d</span>` : '—'}</td><td class="small muted">${esc([r.pedido_por, r.producido_por, r.cortado_por].filter(Boolean).join(' → '))}</td></tr>`; }).join('') || '<tr><td colspan="9" class="muted">Sin lotes en el período</td></tr>'}
   </tbody></table></div>`;
 };
 function informe(F) {
   const rows = S.flujo.filter(r => r.fecha >= F.desde && r.fecha <= F.hasta && (!F.v || r.variedad_id === F.v)).sort((a, b) => a.fecha.localeCompare(b.fecha) || vById(a.variedad_id).orden - vById(b.variedad_id).orden);
   const sum = (arr, f) => arr.reduce((s, r) => s + f(r), 0);
-  const both = rows.filter(r => isNum(r.pedido) && isNum(r.producido)), cerr = rows.filter(r => isNum(r.cortado));
+  const both = rows.filter(r => isNum(r.pedido) && isNum(r.producido)), cerr = rows.filter(r => cerrado(r) && isNum(r.producido));
   const ped = sum(both, r => r.pedido), prod = sum(both, r => r.producido);
   const desc = sum(cerr, r => r.producido - r.cortado), prodCerr = sum(cerr, r => r.producido);
   const esperas = cerr.filter(r => r.fecha_corte).map(r => diffDays(r.fecha_corte, r.fecha));
-  const porVar = S.variedades.filter(v => !F.v || v.id === F.v).map(v => { const rv = rows.filter(r => r.variedad_id === v.id), b = rv.filter(r => isNum(r.pedido) && isNum(r.producido)), c = rv.filter(r => isNum(r.cortado)); return { id: v.id, ped: sum(b, r => r.pedido), prod: sum(rv, r => r.producido || 0), cort: sum(c, r => r.cortado), desc: sum(c, r => r.producido - r.cortado), prodC: sum(c, r => r.producido) }; }).filter(x => x.ped || x.prod);
+  const porVar = S.variedades.filter(v => !F.v || v.id === F.v).map(v => { const rv = rows.filter(r => r.variedad_id === v.id), b = rv.filter(r => isNum(r.pedido) && isNum(r.producido)), c = rv.filter(r => cerrado(r) && isNum(r.producido)); return { id: v.id, ped: sum(b, r => r.pedido), prod: sum(rv, r => r.producido || 0), cort: sum(c, r => r.cortado), desc: sum(c, r => r.producido - r.cortado), prodC: sum(c, r => r.producido) }; }).filter(x => x.ped || x.prod);
   const fechas = [...new Set(rows.map(r => r.fecha))];
-  const dias = fechas.map(f => { const rf = rows.filter(r => r.fecha === f), c = rf.filter(r => isNum(r.cortado)); return { f, ped: sum(rf, r => r.pedido || 0), prod: sum(rf, r => r.producido || 0), cort: sum(rf, r => r.cortado || 0), descP: pct(sum(c, r => r.producido - r.cortado), sum(c, r => r.producido)) }; });
-  return { rows, ped, prod, cump: pct(prod, ped), lotesDesv: both.filter(r => r.pedido && Math.abs(pct(r.producido - r.pedido, r.pedido)) > cfg('umbral_desvio')).length, desc, prodCerr, descP: pct(desc, prodCerr), esperaProm: esperas.length ? esperas.reduce((a, b) => a + b, 0) / esperas.length : null, cerrados: cerr.length, abiertos: rows.filter(r => isNum(r.producido) && !isNum(r.cortado)).length, porVar, dias };
+  const dias = fechas.map(f => { const rf = rows.filter(r => r.fecha === f), c = rf.filter(r => cerrado(r) && isNum(r.producido)); return { f, ped: sum(rf, r => r.pedido || 0), prod: sum(rf, r => r.producido || 0), cort: sum(rf, r => r.cortado || 0), descP: pct(sum(c, r => r.producido - r.cortado), sum(c, r => r.producido)) }; });
+  return { rows, ped, prod, cump: pct(prod, ped), lotesDesv: both.filter(r => r.pedido && Math.abs(pct(r.producido - r.pedido, r.pedido)) > cfg('umbral_desvio')).length, desc, prodCerr, descP: pct(desc, prodCerr), esperaProm: esperas.length ? esperas.reduce((a, b) => a + b, 0) / esperas.length : null, cerrados: cerr.length, abiertos: rows.filter(r => isNum(r.producido) && !cerrado(r)).length, porVar, dias };
 }
 AFTER.informes = () => {
   if (!window.Chart) return;
@@ -597,6 +710,7 @@ function exportar() {
   const F = UI.F, R = informe(F), wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(R.rows.map(r => { const I = info(r); return { 'Fecha lote': r.fecha, Día: DIAS[dow(r.fecha)], Lote: 'L' + r.lote, Variedad: vById(r.variedad_id).nombre, Pedido: r.pedido ?? '', Producido: r.producido ?? '', 'Desvío producción': I.desv ?? '', 'Desvío %': I.desvPct ?? '', Cortado: r.cortado ?? '', 'Fecha corte': r.fecha_corte || '', Descarte: I.desc ?? '', 'Descarte %': I.descPct ?? '', 'Días de espera': I.espera ?? '', 'Fecha pedido': fechaPaso(r, 'pedido') || '', 'Fecha producción': fechaPaso(r, 'producido') || '', 'Pedido por': r.pedido_por || '', 'Producido por': r.producido_por || '', 'Cortado por': r.cortado_por || '' }; })), 'Lotes');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(R.porVar.map(x => ({ Variedad: vById(x.id).nombre, Pedido: x.ped, Producido: x.prod, 'Cumplimiento %': x.ped ? pct(x.prod, x.ped) : '', Cortado: x.cort, Descarte: x.desc, 'Descarte %': x.prodC ? pct(x.desc, x.prodC) : '' }))), 'Por variedad');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.cortes.filter(c => { const r = S.flujo.find(x => x.id === c.flujo_id); return r && R.rows.includes(r); }).map(c => { const r = S.flujo.find(x => x.id === c.flujo_id); return { 'Fecha lote': r.fecha, Lote: 'L' + r.lote, Variedad: vById(r.variedad_id).nombre, 'Fecha corte': c.fecha, Cantidad: c.cantidad, 'Cargado por': c.por || '' }; })), 'Cargas de corte');
   XLSX.writeFile(wb, `pan-molde_${F.desde}_a_${F.hasta}.xlsx`);
 }
 
@@ -754,7 +868,7 @@ function seedDemo() {
       out.push(r);
     }
   }
-  S.flujo = out; demoSave(); toast('Datos de ejemplo cargados (3 semanas)'); go('flujo');
+  S.flujo = out; S.cortes = out.filter(r => isNum(r.cortado)).map(r => ({ id: uid(), flujo_id: r.id, fecha: r.fecha_corte, cantidad: r.cortado, por: 'Encargado 3', created_at: r.cortado_at })); demoSave(); toast('Datos de ejemplo cargados (3 semanas)'); go('flujo');
 }
 
 /* ---------- arranque ---------- */
