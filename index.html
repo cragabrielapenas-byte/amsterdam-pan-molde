@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Pan de molde · Amsterdam</title>
+<title>Control moldes · Amsterdam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Lora:ital,wght@1,500;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -228,12 +228,16 @@ table.flujo td.mine{background:rgba(233,116,58,.07)}
 .chk{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;cursor:pointer}
 .chk input{width:20px;height:20px;accent-color:var(--accent)}
 .qbig{-moz-appearance:textfield}.qbig::-webkit-inner-spin-button,.qbig::-webkit-outer-spin-button{-webkit-appearance:none}
+.ams-menu{white-space:nowrap;color:#fff;text-decoration:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:8px 14px;font-family:var(--font-title);font-weight:600;font-size:13px}
+@media(max-width:520px){.ams-menu span{display:none}}
+.ams-login-link{display:block;text-align:center;margin-top:18px;font-weight:600;color:var(--primary-3);text-decoration:none}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><div class="logo">🍞</div><div>Pan de <em>molde</em><small>Panificadora Amsterdam</small></div></div>
+  <div class="brand"><div class="logo">🍞</div><div>Control <em>moldes</em><small>Panificadora Amsterdam</small></div></div>
   <div class="hsp"></div>
+  <a class="ams-menu" href="https://app.panaderiaamsterdam.com.uy/" title="Volver al menú de la panadería">☰ <span>Menú</span></a>
   <span id="mode" class="badge-mode">DEMO</span>
   <button class="chip-user" id="userChip" onclick="menuUser()">—</button>
 </header>
@@ -822,7 +826,7 @@ function renderLogin() {
       ${LIVE ? '' : '<div class="small muted" style="text-align:center;margin-top:14px">Modo demo: el PIN de todos es <b>1234</b></div>'}</div></div></div>`;
     return;
   }
-  el.innerHTML = `<div class="login"><div class="login-in"><div class="eyebrow"><span>🍞</span>Panificadora Amsterdam</div><h1>Pan de molde, <em>lote a lote</em></h1><div class="sub">Tocá tu nombre para ingresar.</div>
+  el.innerHTML = `<div class="login"><div class="login-in"><div class="eyebrow"><span>🍞</span>Panificadora Amsterdam</div><h1>Control moldes, <em>lote a lote</em></h1><div class="sub">Tocá tu nombre para ingresar.</div>
     <div class="ucards">${ps.map(p => `<button class="ucard" onclick="LG.step='pin';LG.pid='${p.id}';LG.pin='';render()"><div class="avatar" style="background:${ROLES[p.rol].color}">${esc(p.nombre[0].toUpperCase())}</div><b>${esc(p.nombre)}</b><small>${ROLES[p.rol].label}</small></button>`).join('')}</div></div></div>`;
 }
 document.addEventListener('keydown', e => { if (!ME() && LG.step === 'pin' && $('#pinbox')) { if (/^[0-9]$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') { LG.pin = LG.pin.slice(0, -1); render(); } } });
@@ -871,6 +875,19 @@ function seedDemo() {
   S.flujo = out; S.cortes = out.filter(r => isNum(r.cortado)).map(r => ({ id: uid(), flujo_id: r.id, fecha: r.fecha_corte, cantidad: r.cortado, por: 'Encargado 3', created_at: r.cortado_at })); demoSave(); toast('Datos de ejemplo cargados (3 semanas)'); go('flujo');
 }
 
+/* ---------- acceso desde el menú de la panadería (app.panaderiaamsterdam.com.uy) ---------- */
+async function amsSSO() {
+  const m = (location.hash || '').match(/^#sso=([^.]+)\.([a-f0-9]+)$/);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  const r = await sb.from('am_users').select('id,name,active,apps,sso_exp').eq('id', m[1]).eq('sso_token', m[2]).eq('active', true).maybeSingle();
+  if (r.error || !r.data || !r.data.sso_exp || new Date(r.data.sso_exp) < new Date()) { setTimeout(() => toast('El acceso venció. Entrá de nuevo desde el menú.', true), 300); return; }
+  const p = S.personas.find(x => x.am_user_id === r.data.id && x.activo && ROLES[x.rol]);
+  if (!p) { localStorage.removeItem('pm_sess'); setTimeout(() => toast('No tenés acceso a Pan de molde. Pedíselo a la administración.', true), 300); return; }
+  localStorage.setItem('pm_sess', p.id); VIEW = 'flujo'; UI = {};
+  setTimeout(() => toast('Hola, ' + p.nombre), 300);
+}
+
 /* ---------- arranque ---------- */
 let reloadT = null, pendingRefresh = false;
 function scheduleReload() { clearTimeout(reloadT); reloadT = setTimeout(async () => { try { await DB.load(); if (!ME()) return render(); const a = document.activeElement; if ((a && ['INPUT', 'SELECT', 'TEXTAREA'].includes(a.tagName)) || $('#modal').innerHTML) { pendingRefresh = true; return; } render(); } catch (e) { console.error(e); } }, 600); }
@@ -881,6 +898,7 @@ document.addEventListener('focusout', () => setTimeout(() => { if (pendingRefres
     if (LIVE) {
       sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       await DB.load();
+      await amsSSO();
       sb.channel('pm').on('postgres_changes', { event: '*', schema: 'public' }, p => { if (p.table && p.table.startsWith('pm_')) scheduleReload(); }).subscribe();
       setInterval(scheduleReload, 5 * 60 * 1000);
       document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleReload(); });
